@@ -1,12 +1,17 @@
 import * as R from "ramda"
 import { Card, FaceValue, faceValueSymbols, Suit, suitOrder, suitSymbols } from "./model"
+import { some } from "fp-ts/lib/Option"
 
 export const create = (suit: Suit, faceValue: FaceValue) => ({
   faceValue,
   suit,
 })
 
-export const equals = (card1: Card, card2: Card) => card1.suit === card2.suit && card1.faceValue === card2.faceValue
+export const equals = (card1: Card) => (card2: Card) => card1.suit === card2.suit && card1.faceValue === card2.faceValue
+
+export const isSuit = (suit: Suit) => (card: Card) => card.suit === suit
+
+export const notIn = (cards: Card[]) => (card: Card) => !cards.some(equals(card))
 
 export const order = (card1: Card, card2: Card) =>
   card1.suit === card2.suit ? card1.faceValue - card2.faceValue : suitOrder[card1.suit] - suitOrder[card2.suit]
