@@ -1,6 +1,7 @@
-import { fromList } from "../../src/Cards/domain"
-import { findAllPossibleMelds, findMinimalDeadwood } from "../../src/Game/domain"
+import { fromList, toList } from "../../src/Cards/domain"
+import { findAllPossibleMelds, findMinimalDeadwood, permutations } from "../../src/Game/domain"
 import { Card } from "../../src/Cards/model"
+import { flatten } from "ramda"
 
 describe("extractMelds", () => {
   describe("with no restrictions", () => {
@@ -116,20 +117,35 @@ describe("findMinimalDeadwood", () => {
     expect(findMinimalDeadwood(cards)).toEqual(expected)
   })
 
-  it("should group ", () => {
-    const cards = fromList("2C 3S 4S 5S 5D 5H")
-    const expected = {
-      deadwood: fromList("2C 3S 4S"),
-      deadwoodValue: 9,
-      runs: [],
-      sets: [fromList("5S 5D 5H")],
-    }
+  describe("should choose the best configuration when a cars can be on a Run and on Set", () => {
+    it("with a Run and a Set", () => {
+      const cards = fromList("2C 3S 4S 5S 5D 5H")
+      const expected = {
+        deadwood: fromList("2C 3S 4S"),
+        deadwoodValue: 9,
+        runs: [],
+        sets: [fromList("5S 5D 5H")],
+      }
 
-    expect(findMinimalDeadwood(cards)).toEqual(expected)
+      expect(findMinimalDeadwood(cards)).toEqual(expected)
+    })
+
+    it("with a Run and two Sets", () => {
+      const cards = fromList("2C 3C 3S 4S 5S 5D 5H 4H 7H 8H JS QS AD AS AC AH")
+      const expected = {
+        deadwood: fromList("3S 4S 4H 7H 8H JS QS"),
+        deadwoodValue: 46,
+        runs: [fromList("AC 2C 3C")],
+        sets: [fromList("AD AS AH"), fromList("5S 5D 5H")],
+      }
+
+      expect(findMinimalDeadwood(cards)).toEqual(expected)
+    })
   })
 })
 
-// it.only("test", () => {
-//   const cards = fromList("2C 3C 3S 4S 5S 5D 5H 4H 7H 8H JS DS AD AS AC AH")
-//   console.log("=====>\n", JSON.stringify(findMinimalDeadwood(cards), null, 2))
+// it.only("tt", () => {
+//   const i = permutations(3)
+//   for (const x of i)
+//     console.log("=====>\n", x)
 // })

@@ -1,6 +1,6 @@
 import * as Cards from "../Cards/domain"
 import { Card, suits } from "../Cards/model"
-import { keys, sort, flatten, binary, range, all } from "ramda"
+import { keys, sort, flatten, binary, range, all, identity } from "ramda"
 import { calcCardsValue } from "../Cards/domain"
 
 type CardCount = {
@@ -15,6 +15,10 @@ type MeldsAndDeadwood = {
   deadwood: Card[]
   sets: Card[][]
   runs: Card[][]
+}
+
+type MeldsAndDeadwoodWithValue = MeldsAndDeadwood & {
+  deadwoodValue: number
 }
 
 const sequences = (someSuitCards: Card[]): Card[][] => {
@@ -73,47 +77,38 @@ export const findAllPossibleMelds = (
   }
 }
 
-const next = (binary: number[]): number[] =>
-  binary.length === 0 ? [1] : binary[0] === 0 ? [1, ...binary.slice(1)] : [0, ...next(binary.slice(1))]
+const nextPermutation = (permutation: number[]): number[] =>
+  permutation.length === 0 ? [1] : permutation[0] === 0 ? [1, ...permutation.slice(1)] : [0, ...nextPermutation(permutation.slice(1))]
 
-const buildMelds = (cards: Card[], duplicates: Card[], binary: number[]) => {
-  const cardsToBeOnRuns = duplicates.filter((_, i) => binary[i] === 0)
-  const cardsToBeOnSets = duplicates.filter((_, i) => binary[i] === 1)
-  return findAllPossibleMelds(cards, cardsToBeOnRuns, cardsToBeOnSets)
+export function* permutations (size: number) {
+  let p = [] as number[]
+  while (p.length <= size) {
+    yield p
+    p = nextPermutation(p)}
 }
 
 export const findMinimalDeadwood = (cards: Card[]) => {
   const { runs, sets } = findAllPossibleMelds(cards)!
   const cardsOnMelds = [...flatten(runs), ...flatten(sets)]
-  const duplicates = cardsOnMelds.reduce(
+  const cardsOnRunsAndSets = cardsOnMelds.reduce(
     (acc, card, i) => (i !== cardsOnMelds.findIndex(Cards.equals(card)) ? [...acc, card] : acc),
     [] as Card[],
   )
 
-  const size = duplicates.length
-  const binary = new Array<number>(size).fill(0)
-  const iterations = Math.pow(2, size)
-  const allMelds = range(0, iterations).reduce(
-    acc => {
-      const melds = buildMelds(cards, duplicates, acc.binary)
-      return {
-        binary: next(binary),
-        melds: melds ? [...acc.melds, melds] : acc.melds,
-      }
-    },
-    { binary, melds: [] as MeldsAndDeadwood[] },
-  )
+  const size = cardsOnRunsAndSets.length
+  const iterator = permutations(size)
+  let allMelds = [] as MeldsAndDeadwoodWithValue[]
+  for (const permutation of iterator) {
+    const cardsToBeOnRuns = cardsOnRunsAndSets.filter((_, i) => (permutation[i] || 0) === 0)
+    const cardsToBeOnSets = cardsOnRunsAndSets.filter((_, i) => (permutation[i] || 0) === 1)
+    const melds = findAllPossibleMelds(cards, cardsToBeOnRuns, cardsToBeOnSets)
+    if (melds)
+      allMelds.push({ ...melds, deadwoodValue: calcCardsValue(melds.deadwood)})
+  }
 
-  const allMeldsWithValue = allMelds.melds.map(meld => ({
-    ...meld,
-    deadwoodValue: calcCardsValue(meld.deadwood),
-  }))
-
-  const bestValue = allMeldsWithValue.reduce((acc, meld) => {
-    return meld.deadwoodValue < acc
-      ? meld.deadwoodValue
-      : acc
+  const bestValue = allMelds.reduce((acc, meld) => {
+    return meld.deadwoodValue < acc ? meld.deadwoodValue : acc
   }, Number.MAX_SAFE_INTEGER)
 
-  return allMeldsWithValue.filter(m => m.deadwoodValue === bestValue)[0]
+  return allMelds.filter(m => m.deadwoodValue === bestValue)[0]
 }
