@@ -30,3 +30,7 @@ export const fromSymbol = (symbol: string) => {
 export const toList = (cards: Card[]) => cards.map(toSymbol).join(" ")
 
 export const fromList = (list: string): Card[] => (list.length === 0 ? [] : list.split(" ").map(fromSymbol))
+
+export const cardValue = (card: Card) => Math.min(card.faceValue, 10)
+
+export const calcCardsValue = (cards: Card[]) => cards.reduce((total, card) => total + cardValue(card), 0)

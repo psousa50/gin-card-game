@@ -1,5 +1,5 @@
-import { fromList, fromSymbol } from "../../src/Cards/domain"
-import { extractMelds } from "../../src/Game/domain"
+import { fromList } from "../../src/Cards/domain"
+import { findAllPossibleMelds, findMinimalDeadwood } from "../../src/Game/domain"
 
 describe("extractMelds", () => {
   describe("with no restrictions", () => {
@@ -11,7 +11,7 @@ describe("extractMelds", () => {
         sets: [fromList("3S 3H 3D")],
       }
 
-      expect(extractMelds(cards)).toEqual(expected)
+      expect(findAllPossibleMelds(cards)).toEqual(expected)
     })
 
     it("should group Sets of 4", () => {
@@ -22,7 +22,7 @@ describe("extractMelds", () => {
         sets: [fromList("3S 3H 3D 3C")],
       }
 
-      expect(extractMelds(cards)).toEqual(expected)
+      expect(findAllPossibleMelds(cards)).toEqual(expected)
     })
 
     it("shouldn't group Sets of 2", () => {
@@ -33,7 +33,7 @@ describe("extractMelds", () => {
         sets: [],
       }
 
-      expect(extractMelds(cards)).toEqual(expected)
+      expect(findAllPossibleMelds(cards)).toEqual(expected)
     })
 
     it("should group Runs of 3", () => {
@@ -44,7 +44,7 @@ describe("extractMelds", () => {
         sets: [],
       }
 
-      expect(extractMelds(cards)).toEqual(expected)
+      expect(findAllPossibleMelds(cards)).toEqual(expected)
     })
 
     it("should use the same card for Runs and Sets", () => {
@@ -55,7 +55,7 @@ describe("extractMelds", () => {
         sets: [fromList("6S 6D 6C")],
       }
 
-      expect(extractMelds(cards)).toEqual(expected)
+      expect(findAllPossibleMelds(cards)).toEqual(expected)
     })
   })
   describe("with restrictions", () => {
@@ -64,7 +64,7 @@ describe("extractMelds", () => {
       const cardsOnRuns = fromList("6S")
       const expected = undefined
 
-      expect(extractMelds(cards, cardsOnRuns)).toEqual(expected)
+      expect(findAllPossibleMelds(cards, cardsOnRuns)).toEqual(expected)
     })
 
     it("shouldn't group a card in a Run if it should be on Set", () => {
@@ -72,7 +72,7 @@ describe("extractMelds", () => {
       const cardsOnSets = fromList("6S")
       const expected = undefined
 
-      expect(extractMelds(cards, [], cardsOnSets)).toEqual(expected)
+      expect(findAllPossibleMelds(cards, [], cardsOnSets)).toEqual(expected)
     })
 
     it("should assign cards to the correct Melds", () => {
@@ -85,7 +85,32 @@ describe("extractMelds", () => {
         sets: [fromList("3S 3D 3H"), fromList("6D 6C 6H")],
       }
 
-      expect(extractMelds(cards, cardsOnRuns, cardsOnSets)).toEqual(expected)
+      expect(findAllPossibleMelds(cards, cardsOnRuns, cardsOnSets)).toEqual(expected)
     })
+  })
+})
+
+
+describe("findMinimalDeadwood", () => {
+  it("should group Sets of 3", () => {
+    const cards = fromList("2C 3S 3H 3D")
+    const expected = {
+      deadwood: fromList("2C"),
+      runs: [],
+      sets: [fromList("3S 3H 3D")],
+    }
+
+    expect(findMinimalDeadwood(cards)).toEqual(expected)
+  })
+
+  it("should group ", () => {
+    const cards = fromList("2C 3S 4S 5S 5D 5H")
+    const expected = {
+      deadwood: fromList("2C 3S 4S"),
+      runs: [],
+      sets: [fromList("5S 5D 5H")],
+    }
+
+    expect(findMinimalDeadwood(cards)).toEqual(expected)
   })
 })
