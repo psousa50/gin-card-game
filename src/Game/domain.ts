@@ -1,6 +1,6 @@
 import * as Cards from "../Cards/domain"
 import { Card, suits } from "../Cards/model"
-import { keys, sort, flatten, binary, range } from "ramda"
+import { keys, sort, flatten, binary, range, all } from "ramda"
 import { calcCardsValue } from "../Cards/domain"
 
 type CardCount = {
@@ -70,7 +70,7 @@ export const findAllPossibleMelds = (
     deadwood,
     sets,
     runs,
-  } as MeldsAndDeadwood
+  }
 }
 
 const next = (binary: number[]): number[] =>
@@ -104,21 +104,16 @@ export const findMinimalDeadwood = (cards: Card[]) => {
     { binary, melds: [] as MeldsAndDeadwood[] },
   )
 
-  const bestMeld = allMelds.melds.reduce(
-    (acc, meld) => {
-      const value = calcCardsValue(meld.deadwood)
-      return value < acc.bestValue
-        ? {
-            bestValue: value,
-            bestMeld: meld,
-          }
-        : acc
-    },
-    {
-      bestValue: Number.MAX_SAFE_INTEGER,
-      bestMeld: undefined as MeldsAndDeadwood | undefined,
-    },
-  )
+  const allMeldsWithValue = allMelds.melds.map(meld => ({
+    ...meld,
+    deadwoodValue: calcCardsValue(meld.deadwood),
+  }))
 
-  return bestMeld.bestMeld
+  const bestValue = allMeldsWithValue.reduce((acc, meld) => {
+    return meld.deadwoodValue < acc
+      ? meld.deadwoodValue
+      : acc
+  }, Number.MAX_SAFE_INTEGER)
+
+  return allMeldsWithValue.filter(m => m.deadwoodValue === bestValue)[0]
 }

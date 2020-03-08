@@ -1,5 +1,6 @@
 import { fromList } from "../../src/Cards/domain"
 import { findAllPossibleMelds, findMinimalDeadwood } from "../../src/Game/domain"
+import { Card } from "../../src/Cards/model"
 
 describe("extractMelds", () => {
   describe("with no restrictions", () => {
@@ -90,12 +91,24 @@ describe("extractMelds", () => {
   })
 })
 
-
 describe("findMinimalDeadwood", () => {
+  it("should return empty meld if no cards given", () => {
+    const cards = [] as Card[]
+    const expected = {
+      deadwood: [],
+      deadwoodValue: 0,
+      runs: [],
+      sets: [],
+    }
+
+    expect(findMinimalDeadwood(cards)).toEqual(expected)
+  })
+
   it("should group Sets of 3", () => {
     const cards = fromList("2C 3S 3H 3D")
     const expected = {
       deadwood: fromList("2C"),
+      deadwoodValue: 2,
       runs: [],
       sets: [fromList("3S 3H 3D")],
     }
@@ -107,6 +120,7 @@ describe("findMinimalDeadwood", () => {
     const cards = fromList("2C 3S 4S 5S 5D 5H")
     const expected = {
       deadwood: fromList("2C 3S 4S"),
+      deadwoodValue: 9,
       runs: [],
       sets: [fromList("5S 5D 5H")],
     }
@@ -114,3 +128,8 @@ describe("findMinimalDeadwood", () => {
     expect(findMinimalDeadwood(cards)).toEqual(expected)
   })
 })
+
+// it.only("test", () => {
+//   const cards = fromList("2C 3C 3S 4S 5S 5D 5H 4H 7H 8H JS DS AD AS AC AH")
+//   console.log("=====>\n", JSON.stringify(findMinimalDeadwood(cards), null, 2))
+// })
