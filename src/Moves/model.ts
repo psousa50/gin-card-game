@@ -2,8 +2,9 @@ import { Card } from "../Cards/model"
 
 export enum MoveStepType {
   DrawCard = "DrawCard",
-  PickCard = "PickCard",
   DiscardCard = "DiscardCard",
+  PickCard = "PickCard",
+  Pass = "Pass",
   Knock = "Knock",
   Gin = "Gin",
   BigGin = "BigGin",
