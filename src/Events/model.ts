@@ -2,13 +2,14 @@ import { GamePublicState } from "../Game/model"
 import { Move } from "../Moves/model"
 import { PlayerPublicState } from "../Players/model"
 
-export const AllPlayers = undefined
-export type PlayerEventTarget = string | typeof AllPlayers
+export type PlayerEventTarget = string
 
 export enum PlayerEventType {
   GameStarted = "GameStarted",
   GameEnded = "GameEnded",
-  Play = "Play",
+  PlayStage1 = "PlayStage1",
+  PlayStage2 = "PlayStage2",
+  DiscardCard = "DiscardCard",
 }
 
 export interface PlayerEventBase {
@@ -26,11 +27,21 @@ export interface PlayerEventGameEnded extends PlayerEventBase {
   type: PlayerEventType.GameEnded
 }
 
-export interface PlayerEventPlay extends PlayerEventBase {
-  type: PlayerEventType.Play
+export interface PlayerEventPlayStage1 extends PlayerEventBase {
+  type: PlayerEventType.PlayStage1
+}
+
+export interface PlayerEventPlayStage2 extends PlayerEventBase {
+  type: PlayerEventType.PlayStage2
+}
+
+export interface PlayerEventDiscard extends PlayerEventBase {
+  type: PlayerEventType.DiscardCard
 }
 
 export type PlayerEvent =
   | PlayerEventGameStarted
   | PlayerEventGameEnded
-  | PlayerEventPlay
+  | PlayerEventPlayStage1
+  | PlayerEventPlayStage2
+  | PlayerEventDiscard

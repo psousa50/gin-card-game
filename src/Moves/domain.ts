@@ -1,15 +1,11 @@
 import { Card } from "../Cards/model"
-import { DiscardCardMoveStep, MoveStepType, SimpleMoveStep } from "./model"
+import { MoveType, DiscardCardMove } from "./model"
 
-export const createSimpleMoveStep = (moveStep: MoveStepType) => ({
-  moveStep
-})
-
-export const createDiscardCardStep = (card: Card): DiscardCardMoveStep => ({
+export const createDiscardCardMove = (card: Card): DiscardCardMove => ({
   card,
-  moveStep: MoveStepType.DrawCard as MoveStepType.DiscardCard,
+  moveType: MoveType.DiscardCard as MoveType.DiscardCard,
 })
 
-export const createMove = (...moveSteps: SimpleMoveStep[]) => ({
-  moveSteps
+export const createMove = (moveType: MoveType) => ({
+  moveType
 })

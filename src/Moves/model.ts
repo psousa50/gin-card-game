@@ -1,6 +1,6 @@
 import { Card } from "../Cards/model"
 
-export enum MoveStepType {
+export enum MoveType {
   DrawCard = "DrawCard",
   DiscardCard = "DiscardCard",
   PickCard = "PickCard",
@@ -10,18 +10,20 @@ export enum MoveStepType {
   BigGin = "BigGin",
 }
 
-export type SimpleMoveStep = {
-  moveStep: MoveStepType
+export type SimpleMove = {
+  moveType: MoveType
 }
 
-export type DiscardCardMoveStep = {
+export type DiscardCardMove = SimpleMove & {
   card: Card
-  moveStep: MoveStepType.DiscardCard
 }
 
-export type MoveStep = SimpleMoveStep | DiscardCardMoveStep
+export type Move = SimpleMove | DiscardCardMove
 
-export type Move = {
-  moveSteps: MoveStep[]
-}
+/*
+MoveStages
 
+  stage1: [pass] knock gin bigGin draw* pick*
+  stage2: discard knock gin bigGin
+
+*/

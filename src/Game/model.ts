@@ -21,6 +21,7 @@ export type GameError = {
 }
 
 export type GamePublicState = Readonly<{
+  countOfCardsInHand: number
   currentPlayerIndex: number
   discardPile: Card[]
   playersCount: number,
@@ -29,8 +30,8 @@ export type GamePublicState = Readonly<{
 }>
 
 export type Game = Readonly<GamePublicState & {
-  stock: Deck
-  players: readonly Player[]
+  deck: Deck
+  players: Player[]
   events: PlayerEvent[]
 }>
 

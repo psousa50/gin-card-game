@@ -36,7 +36,7 @@ export const shuffle = (deck: Deck, times: number = 100) =>
     return { ...deck, cards: [...cards.slice(0, p), ...cards.slice(p + 1), cards[p]] }
   }, deck)
 
-export const distributeCards = (deck: Deck, count: number) => ({
+export const drawCards = (deck: Deck, count: number) => ({
   cards: sortCards(deck.cards.slice(0, count)),
   deck: {
     ...deck,

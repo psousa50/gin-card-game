@@ -7,11 +7,12 @@ export const create = (suit: Suit, faceValue: FaceValue) => ({
   suit,
 })
 
-export const equals = (card1: Card) => (card2: Card) => card1.suit === card2.suit && card1.faceValue === card2.faceValue
+export const equal = (card1: Card) => (card2: Card) => card1.suit === card2.suit && card1.faceValue === card2.faceValue
+export const notEqual = (card1: Card) => (card2: Card) => !equal(card1)(card2)
 
 export const isSuit = (suit: Suit) => (card: Card) => card.suit === suit
 
-export const notIn = (cards: Card[]) => (card: Card) => !cards.some(equals(card))
+export const notIn = (cards: Card[]) => (card: Card) => !cards.some(equal(card))
 
 export const order = (card1: Card, card2: Card) =>
   card1.suit === card2.suit ? card1.faceValue - card2.faceValue : suitOrder[card1.suit] - suitOrder[card2.suit]

@@ -91,7 +91,7 @@ export const findMinimalDeadwood = (cards: Card[]) => {
   const { runs, sets } = findAllPossibleMelds(cards)!
   const cardsOnMelds = [...flatten(runs), ...flatten(sets)]
   const cardsOnBothRunsAndSets = cardsOnMelds.reduce(
-    (acc, card, i) => (i !== cardsOnMelds.findIndex(Cards.equals(card)) ? [...acc, card] : acc),
+    (acc, card, i) => (i !== cardsOnMelds.findIndex(Cards.equal(card)) ? [...acc, card] : acc),
     [] as Card[],
   )
 
