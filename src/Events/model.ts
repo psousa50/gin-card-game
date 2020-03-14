@@ -1,5 +1,4 @@
 import { GamePublicState } from "../Game/model"
-import { Move } from "../Moves/model"
 import { PlayerPublicState } from "../Players/model"
 
 export type PlayerEventTarget = string

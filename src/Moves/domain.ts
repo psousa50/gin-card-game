@@ -1,5 +1,5 @@
 import { Card } from "../Cards/model"
-import { MoveType, DiscardCardMove } from "./model"
+import { MoveType, DiscardCardMove, Move } from "./model"
 
 export const createDiscardCardMove = (card: Card): DiscardCardMove => ({
   card,
@@ -8,4 +8,4 @@ export const createDiscardCardMove = (card: Card): DiscardCardMove => ({
 
 export const createMove = (moveType: MoveType) => ({
   moveType
-})
+}) as Move

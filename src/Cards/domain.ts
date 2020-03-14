@@ -1,6 +1,5 @@
 import * as R from "ramda"
 import { Card, FaceValue, faceValueSymbols, Suit, suitOrder, suitSymbols } from "./model"
-import { some } from "fp-ts/lib/Option"
 
 export const create = (suit: Suit, faceValue: FaceValue) => ({
   faceValue,

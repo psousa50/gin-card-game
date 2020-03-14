@@ -1,6 +1,6 @@
 import * as Cards from "../Cards/domain"
 import { Card, suits } from "../Cards/model"
-import { keys, sort, flatten, binary, range, all, identity } from "ramda"
+import { keys, sort, flatten } from "ramda"
 import { calcCardsValue } from "../Cards/domain"
 
 type CardCount = {

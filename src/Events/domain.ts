@@ -1,5 +1,5 @@
 import { Game } from "../Game/model"
-import { Player, PlayerId } from "../Players/model"
+import { Player } from "../Players/model"
 import { PlayerEvent, PlayerEventType, PlayerEventTarget } from "./model"
 
 const createPlayerEventBase = (
@@ -32,4 +32,4 @@ const createPlayerEventBase = (
 export const createPlayerEvent = (type: PlayerEventType, player: Player, game: Game): PlayerEvent => ({
   ...createPlayerEventBase(player.id, player, game),
   type,
-})
+}) as PlayerEvent

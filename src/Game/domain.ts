@@ -5,7 +5,7 @@ import * as Events from "../Events/domain"
 import * as Decks from "../Deck/domain"
 import { Deck } from "../Deck/model"
 import { Environment } from "../Environment/model"
-import { GameAction, actionOf, ask, GameResult, actionErrorOf } from "../utils/actions"
+import { GameAction, actionOf, actionErrorOf } from "../utils/actions"
 import { Game, GameStage, GameErrorType } from "./model"
 import { pipe } from "fp-ts/lib/pipeable"
 import { chain } from "fp-ts/lib/ReaderEither"
@@ -102,8 +102,6 @@ const moveRules: MoveRules = {
   [MoveType.DrawCard]: game => currentPlayer(game).hand.length === 10,
   [MoveType.Knock]: game => Melds.findMinimalDeadwood(currentPlayer(game).hand).deadwoodValue <= 10,
   [MoveType.Gin]: game => Melds.findMinimalDeadwood(currentPlayer(game).hand).deadwood.length <= 1,
-  [MoveType.BigGin]: game =>
-    currentPlayer(game).hand.length === 11 && Melds.findMinimalDeadwood(currentPlayer(game).hand).deadwood.length === 0,
 }
 
 const validateMove = (move: Move): GameAction => game =>
@@ -184,12 +182,11 @@ const moveActions: MoveActions = {
   [MoveType.DrawCard]: [drawCardToPlayer, addEventsToCurrentPlayer(PlayerEventType.PlayStage2)],
   [MoveType.Knock]: [endGame],
   [MoveType.Gin]: [endGame],
-  [MoveType.BigGin]: [endGame],
 }
 
 export const doMove = (move: Move): GameAction => game =>
   move.moveType === MoveType.DiscardCard
-    ? act(game)(discardCardFromPlayer((move as any).card), moveToNextPlayer)
+    ? act(game)(discardCardFromPlayer(move.card), moveToNextPlayer)
     : act(game)(...moveActions[move.moveType])
 
 export const play = (playerId: PlayerId, move: Move): GameAction => game =>

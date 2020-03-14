@@ -7,18 +7,36 @@ export enum MoveType {
   Pass = "Pass",
   Knock = "Knock",
   Gin = "Gin",
-  BigGin = "BigGin",
 }
 
-export type SimpleMove = {
-  moveType: MoveType
+export type DrawCardMove = {
+  moveType: MoveType.DrawCard
 }
-
-export type DiscardCardMove = SimpleMove & {
+export type PickCardMove = {
+  moveType: MoveType.PickCard
+}
+export type PassMove = {
+  moveType: MoveType.Pass
+}
+export type KnockMove = {
+  moveType: MoveType.Knock
+}
+export type GinMove = {
+  moveType: MoveType.Gin
+}
+export type DiscardCardMove = {
   card: Card
+  moveType: MoveType.DiscardCard
 }
 
-export type Move = SimpleMove | DiscardCardMove
+export type Move =
+DrawCardMove |
+PickCardMove |
+PassMove |
+KnockMove |
+GinMove |
+DiscardCardMove
+
 
 /*
 MoveStages

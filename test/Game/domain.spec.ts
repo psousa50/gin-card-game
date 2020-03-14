@@ -306,32 +306,5 @@ describe("game", () => {
 
       expect(gameError.type).toBe(GameErrorType.InvalidMove)
     })
-
-    it("can BigGin if deadwood has no cards with 11 a 11 cards hand", () => {
-      const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 5H 6H 7H")
-      const deck1 = Decks.fromCards([...firstPlayerHand, ...deck.cards.filter(Cards.notIn(firstPlayerHand))])
-      const move = createMove(MoveType.BigGin)
-      const gameError = getLeft(Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, move)))
-
-      expect(gameError.type).toBe(GameErrorType.InvalidMove)
-    })
-
-    it("can't BigGin with 10 cards", () => {
-      const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 5H 6H")
-      const deck1 = Decks.fromCards([...firstPlayerHand, ...deck.cards.filter(Cards.notIn(firstPlayerHand))])
-      const move = createMove(MoveType.BigGin)
-      const gameError = getLeft(Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, move)))
-
-      expect(gameError.type).toBe(GameErrorType.InvalidMove)
-    })
-
-    it("can't BigGin if there is deadwood", () => {
-      const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 5H 6H 9D")
-      const deck1 = Decks.fromCards([...firstPlayerHand, ...deck.cards.filter(Cards.notIn(firstPlayerHand))])
-      const move = createMove(MoveType.BigGin)
-      const gameError = getLeft(Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, move)))
-
-      expect(gameError.type).toBe(GameErrorType.InvalidMove)
-    })
   })
 })
