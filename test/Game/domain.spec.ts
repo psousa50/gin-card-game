@@ -9,7 +9,8 @@ import { createMove, createDiscardCardMove } from "../../src/Moves/domain"
 import { MoveType } from "../../src/Moves/model"
 import { randomElement } from "../../src/utils/misc"
 import { isRight, isLeft } from "fp-ts/lib/Either"
-import { pick } from "ramda"
+import { pick, range } from "ramda"
+import { actionOf, GameAction } from "../../src/utils/actions"
 
 describe("game", () => {
   const deck = Decks.create()
@@ -20,6 +21,11 @@ describe("game", () => {
   const playersCount = 2
 
   const newGame = () => Game.create(players, deck)
+
+  const drawCardAction: GameAction = game => Game.play(Game.currentPlayer(game).id, createMove(MoveType.DrawCard))(game)
+  const pickCardAction: GameAction = game => Game.play(Game.currentPlayer(game).id, createMove(MoveType.PickCard))(game)
+  const discardFirstCardAction: GameAction = game =>
+    Game.play(Game.currentPlayer(game).id, createDiscardCardMove(Game.currentPlayer(game).hand[0]))(game)
 
   it("should create a game", () => {
     const game = Game.create(players, deck)
@@ -88,14 +94,9 @@ describe("game", () => {
 
     describe("On PickCard", () => {
       it("should assign a card to the player from the pile", () => {
-        const gameAfterFirstPlayer = getRight(
-          Game.run()(newGame())(Game.start, Game.play(p1.id, createMove(MoveType.DrawCard)), game =>
-            Game.play(p1.id, createDiscardCardMove(game.players[0].hand[0]))(game),
-          ),
-        )
+        const gameAfterFirstPlayer = getRight(Game.run()(newGame())(Game.start, drawCardAction, discardFirstCardAction))
         const pileCard = gameAfterFirstPlayer.discardPile[0]
-        const move = createMove(MoveType.PickCard)
-        const game = getRight(Game.run()(gameAfterFirstPlayer)(Game.play(p2.id, move)))
+        const game = getRight(Game.run()(gameAfterFirstPlayer)(pickCardAction))
 
         expect(game.players[1].hand.filter(Cards.equal(pileCard))).toHaveLength(1)
         expect(game.discardPile).toHaveLength(1)
@@ -103,13 +104,8 @@ describe("game", () => {
       })
 
       it("should ask for second stage move", () => {
-        const gameAfterFirstPlayer = getRight(
-          Game.run()(newGame())(Game.start, Game.play(p1.id, createMove(MoveType.DrawCard)), game =>
-            Game.play(p1.id, createDiscardCardMove(game.players[0].hand[0]))(game),
-          ),
-        )
-        const move = createMove(MoveType.PickCard)
-        const game = getRight(Game.run()(gameAfterFirstPlayer)(Game.play(p2.id, move)))
+        const gameAfterFirstPlayer = getRight(Game.run()(newGame())(Game.start, drawCardAction, discardFirstCardAction))
+        const game = getRight(Game.run()(gameAfterFirstPlayer)(pickCardAction))
 
         const events = game.events.filter(e => e.type === PlayerEventType.PlayStage2)
 
@@ -121,8 +117,7 @@ describe("game", () => {
 
     describe("On DrawCard", () => {
       it("should assign a card to the player from the deck", () => {
-        const move = createMove(MoveType.DrawCard)
-        const game = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, move)))
+        const game = getRight(Game.run()(newGame())(Game.start, drawCardAction))
         const topDeckCard = deck.cards[handCount * playersCount + 1]
 
         expect(game.players[0].hand.filter(Cards.equal(topDeckCard))).toHaveLength(1)
@@ -131,8 +126,7 @@ describe("game", () => {
       })
 
       it("should ask for second stage move", () => {
-        const move = createMove(MoveType.DrawCard)
-        const game = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, move)))
+        const game = getRight(Game.run()(newGame())(Game.start, drawCardAction))
 
         const events = game.events.filter(e => e.type === PlayerEventType.PlayStage2)
 
@@ -143,19 +137,28 @@ describe("game", () => {
 
     describe("On DiscardCard", () => {
       it("should send the player card to the pile", () => {
-        const firstMove = createMove(MoveType.DrawCard)
-        const gameAfterDraw = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, firstMove)))
-        const cardToDiscard = randomElement(gameAfterDraw.players[0].hand)!
-        const discardMove = createDiscardCardMove(cardToDiscard)
-        const game = getRight(Game.run()(gameAfterDraw)(Game.play(p1.id, discardMove)))
+        const game = getRight(Game.run()(newGame())(Game.start, drawCardAction, discardFirstCardAction))
+        const discardCard = game.discardPile[0]
 
-        expect(game.players[0].hand.filter(Cards.equal(cardToDiscard))).toHaveLength(0)
-        expect(Cards.equal(game.discardPile[0])(cardToDiscard)).toBeTruthy()
+        expect(game.players[0].hand.filter(Cards.equal(discardCard))).toHaveLength(0)
+        expect(Cards.equal(game.discardPile[0])(discardCard)).toBeTruthy()
         expect(game.deck.cards).toHaveLength(deck.cards.length - 2 - playersCount * handCount)
       })
     })
 
     describe("it should end the game", () => {
+      it("if there is only two cards left in the deck", () => {
+        const startedGame = getRight(Game.run()(newGame())(Game.start))
+        const cardsLeft = startedGame.deck.cards.length
+        const actions = range(0, cardsLeft - 2).reduce(
+          actions => [...actions, drawCardAction, discardFirstCardAction],
+          [] as GameAction[],
+        )
+        const endedGame = getRight(Game.run()(startedGame)(...actions))
+
+        expect(endedGame.stage).toBe(GameStage.Ended)
+      })
+
       it("on Gin", () => {
         const move = createMove(MoveType.Gin)
         const game = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, move)))
@@ -164,15 +167,14 @@ describe("game", () => {
       })
 
       it("on BigGin", () => {
-        const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 5H 6H")
+        const firstPlayerHand = Cards.fromSymbols("2C 3C 4C 5C 6C 2H 3H 4H 5H 6H")
         const cardToPick = Cards.fromSymbol("7H")
         const deck1 = Decks.fromCards([
           ...firstPlayerHand,
           cardToPick,
           ...deck.cards.filter(Cards.notIn([...firstPlayerHand, cardToPick])),
         ])
-        const pickMove = createMove(MoveType.PickCard)
-        const gameAfterPick = getRight(Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, pickMove)))
+        const gameAfterPick = getRight(Game.run()(Game.create(players, deck1))(Game.start, pickCardAction))
 
         expect(gameAfterPick.stage).toBe(GameStage.Ended)
       })
@@ -262,7 +264,7 @@ describe("game", () => {
       })
 
       it("is invalid if player has less than 11 cards", () => {
-        const startedGame = getRight( Game.run()(newGame())(Game.start))
+        const startedGame = getRight(Game.run()(newGame())(Game.start))
         const cardToDiscard = randomElement(startedGame.players[0].hand)!
         const discardMove = createDiscardCardMove(cardToDiscard)
         const game = Game.run()(newGame())(Game.start, Game.play(p1.id, discardMove))
@@ -272,7 +274,7 @@ describe("game", () => {
     })
 
     it("can Knock if deadwood is worth less then 10", () => {
-      const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 2S 8S")
+      const firstPlayerHand = Cards.fromSymbols("2C 3C 4C 5C 6C 2H 3H 4H 2S 8S")
       const deck1 = Decks.fromCards([...firstPlayerHand, ...deck.cards.filter(Cards.notIn(firstPlayerHand))])
       const move = createMove(MoveType.Knock)
       const game = Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, move))
@@ -281,7 +283,7 @@ describe("game", () => {
     })
 
     it("can't Knock if deadwood is higher then 10", () => {
-      const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 2S 9S")
+      const firstPlayerHand = Cards.fromSymbols("2C 3C 4C 5C 6C 2H 3H 4H 2S 9S")
       const deck1 = Decks.fromCards([...firstPlayerHand, ...deck.cards.filter(Cards.notIn(firstPlayerHand))])
       const move = createMove(MoveType.Knock)
       const gameError = getLeft(Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, move)))
@@ -290,7 +292,7 @@ describe("game", () => {
     })
 
     it("can Gin if deadwood has only one card", () => {
-      const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 2S")
+      const firstPlayerHand = Cards.fromSymbols("2C 3C 4C 5C 6C 2H 3H 4H 2S")
       const deck1 = Decks.fromCards([...firstPlayerHand, ...deck.cards.filter(Cards.notIn(firstPlayerHand))])
       const move = createMove(MoveType.Gin)
       const game = Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, move))
@@ -299,7 +301,7 @@ describe("game", () => {
     })
 
     it("can't Gin if deadwood has more than one card", () => {
-      const firstPlayerHand = Cards.fromList("2C 3C 4C 5C 6C 2H 3H 4H 2S 9S")
+      const firstPlayerHand = Cards.fromSymbols("2C 3C 4C 5C 6C 2H 3H 4H 2S 9S")
       const deck1 = Decks.fromCards([...firstPlayerHand, ...deck.cards.filter(Cards.notIn(firstPlayerHand))])
       const move = createMove(MoveType.Gin)
       const gameError = getLeft(Game.run()(Game.create(players, deck1))(Game.start, Game.play(p1.id, move)))

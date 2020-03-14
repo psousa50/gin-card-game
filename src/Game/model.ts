@@ -20,19 +20,19 @@ export type GameError = {
   type: GameErrorType
 }
 
-export type GamePublicState = Readonly<{
+export type GamePublicState = {
   countOfCardsInHand: number
   currentPlayerIndex: number
   discardPile: Card[]
   playersCount: number,
   stage: GameStage
   moveCounter: number
-}>
+}
 
-export type Game = Readonly<GamePublicState & {
+export type Game = GamePublicState & {
   deck: Deck
   players: Player[]
   events: PlayerEvent[]
-}>
+}
 
 export type MoveValidator = (gameState: GamePublicState, playerState: PlayerPublicState) => (move: Move) => boolean

@@ -29,14 +29,15 @@ export type DiscardCardMove = {
   moveType: MoveType.DiscardCard
 }
 
-export type Move =
-DrawCardMove |
-PickCardMove |
-PassMove |
-KnockMove |
-GinMove |
-DiscardCardMove
+export type Move = DrawCardMove | PickCardMove | PassMove | KnockMove | GinMove | DiscardCardMove
 
+export const allSimpleMoves = [
+  MoveType.DrawCard,
+  MoveType.PickCard,
+  MoveType.Pass,
+  MoveType.Knock,
+  MoveType.Gin,
+]
 
 /*
 MoveStages

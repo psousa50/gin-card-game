@@ -11,8 +11,9 @@ import { pipe } from "fp-ts/lib/pipeable"
 import { chain } from "fp-ts/lib/ReaderEither"
 import { buildEnvironment } from "../Environment/domain"
 import { PlayerEvent, PlayerEventType } from "../Events/model"
-import { Move, MoveType } from "../Moves/model"
+import { Move, MoveType, allSimpleMoves } from "../Moves/model"
 import { Card } from "../Cards/model"
+import { createMove, createDiscardCardMove } from "../Moves/domain"
 
 export const create = (players: Player[], deck: Deck): Game => ({
   countOfCardsInHand: 10,
@@ -47,7 +48,7 @@ export const act = (game: Game) => (...actions: GameAction[]) =>
 export const run = (environment?: Environment) => (game: Game) => (...actions: GameAction[]) =>
   act(game)(...actions)(environment || buildEnvironment())
 
-const currentPlayer = (game: Game) => game.players[game.currentPlayerIndex]
+export const currentPlayer = (game: Game) => game.players[game.currentPlayerIndex]
 
 const replacePlayer = (players: Player[], playerId: PlayerId, replaceFn: (player: Player) => Player) =>
   players.map(p => (p.id === playerId ? replaceFn(p) : p))
@@ -104,8 +105,10 @@ const moveRules: MoveRules = {
   [MoveType.Gin]: game => Melds.findMinimalDeadwood(currentPlayer(game).hand).deadwood.length <= 1,
 }
 
+const moveIsValid = (game: Game) => (move: Move) => moveRules[move.moveType](game)
+
 const validateMove = (move: Move): GameAction => game =>
-  moveRules[move.moveType](game) ? actionOf(game) : gameErrorOf(GameErrorType.InvalidMove)
+  moveIsValid(game)(move) ? actionOf(game) : gameErrorOf(GameErrorType.InvalidMove)
 
 const drawCard: GameAction = game =>
   actionOf({
@@ -163,6 +166,8 @@ const endGame: GameAction = game => {
   })
 }
 
+const checkEndOfDeck: GameAction = game => (game.deck.cards.length <= 2 ? endGame(game) : actionOf(game))
+
 const checkBigGin: GameAction = game =>
   currentPlayer(game).hand.length === 11 && Melds.findMinimalDeadwood(currentPlayer(game).hand).deadwood.length === 0
     ? endGame(game)
@@ -190,4 +195,9 @@ export const doMove = (move: Move): GameAction => game =>
     : act(game)(...moveActions[move.moveType])
 
 export const play = (playerId: PlayerId, move: Move): GameAction => game =>
-  act(game)(validatePlayer(playerId), validateMove(move), doMove(move), checkBigGin)
+  act(game)(validatePlayer(playerId), validateMove(move), doMove(move), checkEndOfDeck, checkBigGin)
+
+export const validMoves = (game: Game) => [
+  ...allSimpleMoves.map(createMove).filter(moveIsValid(game)),
+  currentPlayer(game).hand.map(createDiscardCardMove),
+]

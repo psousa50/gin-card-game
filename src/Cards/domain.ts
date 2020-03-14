@@ -27,9 +27,9 @@ export const fromSymbol = (symbol: string) => {
   return create(suit, faceValue)
 }
 
-export const toList = (cards: Card[]) => cards.map(toSymbol).join(" ")
+export const toSymbols = (cards: Card[]) => cards.map(toSymbol).join(" ")
 
-export const fromList = (list: string): Card[] => (list.length === 0 ? [] : list.split(" ").map(fromSymbol))
+export const fromSymbols = (list: string): Card[] => (list.length === 0 ? [] : list.split(" ").map(fromSymbol))
 
 export const cardValue = (card: Card) => Math.min(card.faceValue, 10)
 
