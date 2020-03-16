@@ -22,7 +22,7 @@ type MeldsAndDeadwoodWithValue = MeldsAndDeadwood & {
 }
 
 const buildSequemces = (sameSuitCards: Card[]): Card[][] => {
-  const ordered = sort(Cards.order, sameSuitCards)
+  const ordered = sort(Cards.orderBySuit, sameSuitCards)
 
   const seqs = ordered.reduce((acc, card) => {
     const l = acc.length

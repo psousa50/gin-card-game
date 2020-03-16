@@ -9,8 +9,8 @@ import { createMove, createDiscardCardMove } from "../../src/Moves/domain"
 import { MoveType } from "../../src/Moves/model"
 import { randomElement } from "../../src/utils/misc"
 import { isRight, isLeft } from "fp-ts/lib/Either"
-import { pick, range } from "ramda"
-import { actionOf, GameAction } from "../../src/utils/actions"
+import { range } from "ramda"
+import { GameAction } from "../../src/utils/actions"
 
 describe("game", () => {
   const deck = Decks.create()
@@ -75,6 +75,14 @@ describe("game", () => {
   })
 
   describe("While playing", () => {
+    it("should send an event for the next player", () => {
+      const move = createMove(MoveType.Pass)
+      const game = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, move)))
+      const events = game.events.filter(e => e.target === p2.id && e.type === PlayerEventType.PlayStage1)
+
+      expect(events).toHaveLength(1)
+    })
+
     it("should return an error if wrong player tries to play", () => {
       const move = { some: "move" } as any
       const gameError = getLeft(Game.run()(newGame())(Game.start, Game.play(p2.id, move)))
@@ -264,10 +272,7 @@ describe("game", () => {
       })
 
       it("is invalid if player has less than 11 cards", () => {
-        const startedGame = getRight(Game.run()(newGame())(Game.start))
-        const cardToDiscard = randomElement(startedGame.players[0].hand)!
-        const discardMove = createDiscardCardMove(cardToDiscard)
-        const game = Game.run()(newGame())(Game.start, Game.play(p1.id, discardMove))
+        const game = Game.run()(newGame())(Game.start, discardFirstCardAction)
 
         expect(isLeft(game)).toBeTruthy()
       })

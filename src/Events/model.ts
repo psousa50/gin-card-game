@@ -34,13 +34,8 @@ export interface PlayerEventPlayStage2 extends PlayerEventBase {
   type: PlayerEventType.PlayStage2
 }
 
-export interface PlayerEventDiscard extends PlayerEventBase {
-  type: PlayerEventType.DiscardCard
-}
-
 export type PlayerEvent =
   | PlayerEventGameStarted
   | PlayerEventGameEnded
   | PlayerEventPlayStage1
   | PlayerEventPlayStage2
-  | PlayerEventDiscard

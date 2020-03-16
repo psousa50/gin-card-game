@@ -13,8 +13,11 @@ export const isSuit = (suit: Suit) => (card: Card) => card.suit === suit
 
 export const notIn = (cards: Card[]) => (card: Card) => !cards.some(equal(card))
 
-export const order = (card1: Card, card2: Card) =>
+export const orderBySuit = (card1: Card, card2: Card) =>
   card1.suit === card2.suit ? card1.faceValue - card2.faceValue : suitOrder[card1.suit] - suitOrder[card2.suit]
+
+export const orderByFaceValue = (card1: Card, card2: Card) =>
+  card1.faceValue === card2.faceValue ?  suitOrder[card1.suit] - suitOrder[card2.suit] : card1.faceValue - card2.faceValue
 
 export const toSymbol = (card: Card) => `${faceValueSymbols[card.faceValue]}${suitSymbols[card.suit]}`
 

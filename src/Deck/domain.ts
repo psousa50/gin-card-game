@@ -44,7 +44,7 @@ export const drawCards = (deck: Deck, count: number) => ({
   },
 })
 
-export const sortCards = (cards: CardModel.Card[]) => R.sort(Card.order, cards)
+export const sortCards = (cards: CardModel.Card[]) => R.sort(Card.orderBySuit, cards)
 
 const powersOfTwo = R.range(0, 14).map(i => Math.pow(2, i))
 

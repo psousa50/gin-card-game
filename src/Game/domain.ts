@@ -4,8 +4,8 @@ import * as Players from "../Players/domain"
 import * as Events from "../Events/domain"
 import * as Decks from "../Deck/domain"
 import { Deck } from "../Deck/model"
-import { Environment } from "../Environment/model"
-import { GameAction, actionOf, actionErrorOf } from "../utils/actions"
+import { Environment, Notifier, NotificationType } from "../Environment/model"
+import { GameAction, actionOf, actionErrorOf, GameResult, ask } from "../utils/actions"
 import { Game, GameStage, GameErrorType } from "./model"
 import { pipe } from "fp-ts/lib/pipeable"
 import { chain } from "fp-ts/lib/ReaderEither"
@@ -35,11 +35,14 @@ type MoveRules = {
   [k: string]: (game: Game) => boolean
 }
 
-// const withEnv = (f: (game: Game) => (env: Environment) => GameResult) => (game: Game) => pipe(ask(), chain(f(game)))
+const withEnv = (f: (game: Game) => (env: Environment) => GameResult) => (game: Game) => pipe(ask(), chain(f(game)))
+
+const notify: Notifier = (type, data = {}) => game => withEnv(game => env => env.notify(type, data)(game))(game)
 
 const gameError = (type: GameErrorType) => ({
   type,
 })
+
 const gameErrorOf = (type: GameErrorType) => actionErrorOf<Game>(gameError(type))
 
 export const act = (game: Game) => (...actions: GameAction[]) =>
@@ -74,10 +77,10 @@ const addEventsToCurrentPlayer = (type: PlayerEventType): GameAction => game =>
 const distributeCards: GameAction = game => {
   const distribution = game.players.reduce(
     (acc, player) => {
-      const d1 = Decks.drawCards(acc.deck, 10)
+      const drawnCards = Decks.drawCards(acc.deck, 10)
       return {
-        deck: d1.deck,
-        players: [...acc.players, Players.addCards(player, d1.cards)],
+        deck: drawnCards.deck,
+        players: [...acc.players, Players.addCards(player, drawnCards.cards)],
       }
     },
     { deck: game.deck, players: [] as Player[] },
@@ -121,50 +124,46 @@ const drawCard: GameAction = game =>
   })
 
 const moveToNextPlayer: GameAction = game =>
-  actionOf({
+  act({
     ...game,
     currentPlayerIndex: (game.currentPlayerIndex + 1) % game.playersCount,
     moveCounter: game.moveCounter + 1,
-  })
+  })(addEventsToCurrentPlayer(PlayerEventType.PlayStage1))
 
 const drawCardToPlayer: GameAction = game => {
-  const d = Decks.drawCards(game.deck, 1)
+  const drawnCards = Decks.drawCards(game.deck, 1)
   return actionOf({
     ...game,
-    deck: d.deck,
-    players: replaceCurrentPlayer(game, p => Players.addCards(p, d.cards)),
+    deck: drawnCards.deck,
+    players: replaceCurrentPlayer(game, p => Players.addCards(p, drawnCards.cards)),
   })
 }
 
-const pickCardToPlayer: GameAction = game => {
-  return actionOf({
+const pickCardToPlayer: GameAction = game =>
+  actionOf({
     ...game,
     discardPile: game.discardPile.slice(1),
     players: replaceCurrentPlayer(game, p => Players.addCards(p, [game.discardPile[0]])),
   })
-}
 
-const discardCardFromPlayer = (cardToDiscard: Card): GameAction => game => {
-  return actionOf({
+const discardCardFromPlayer = (cardToDiscard: Card): GameAction => game =>
+  actionOf({
     ...game,
     discardPile: [cardToDiscard, ...game.discardPile],
     players: replaceCurrentPlayer(game, p => Players.removeCard(p, cardToDiscard)),
   })
-}
 
-const startPlaying: GameAction = game => {
-  return actionOf({
+const startPlaying: GameAction = game =>
+  actionOf({
     ...game,
     stage: GameStage.Playing,
   })
-}
 
-const endGame: GameAction = game => {
-  return actionOf({
+const endGame: GameAction = game =>
+  actionOf({
     ...game,
     stage: GameStage.Ended,
   })
-}
 
 const checkEndOfDeck: GameAction = game => (game.deck.cards.length <= 2 ? endGame(game) : actionOf(game))
 
@@ -179,7 +178,14 @@ export const start: GameAction = game =>
     distributeCards,
     drawCard,
     addEvents(...toAllPlayers(game)(PlayerEventType.GameStarted), toCurrentPlayer(game)(PlayerEventType.PlayStage1)),
+    notify(NotificationType.Started),
   )
+
+export const extractEvents: GameAction = game =>
+  actionOf({
+    ...game,
+    events: [],
+  })
 
 const moveActions: MoveActions = {
   [MoveType.Pass]: [moveToNextPlayer],
@@ -195,9 +201,14 @@ export const doMove = (move: Move): GameAction => game =>
     : act(game)(...moveActions[move.moveType])
 
 export const play = (playerId: PlayerId, move: Move): GameAction => game =>
-  act(game)(validatePlayer(playerId), validateMove(move), doMove(move), checkEndOfDeck, checkBigGin)
+  act(game)(
+    validatePlayer(playerId),
+    validateMove(move),
+    doMove(move),
+    checkEndOfDeck,
+    checkBigGin,
+    notify(NotificationType.Played, { playerId, move }),
+  )
 
-export const validMoves = (game: Game) => [
-  ...allSimpleMoves.map(createMove).filter(moveIsValid(game)),
-  currentPlayer(game).hand.map(createDiscardCardMove),
-]
+export const validMoves = (game: Game) =>
+  [...allSimpleMoves.map(createMove), ...currentPlayer(game).hand.map(createDiscardCardMove)].filter(moveIsValid(game))
