@@ -4,9 +4,6 @@ import { Environment } from "./model"
 import { actionOf } from "../utils/actions"
 
 const defaultEnvironment: Environment = {
-  config: {
-    auto: true,
-  },
   notify: () => game => actionOf(game)
 }
 

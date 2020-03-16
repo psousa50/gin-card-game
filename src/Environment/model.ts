@@ -12,6 +12,5 @@ export enum NotificationType {
 export type Notifier = (type: NotificationType, data?: {}) => GameAction
 
 export type Environment = {
-  config: Config
   notify: Notifier
 }

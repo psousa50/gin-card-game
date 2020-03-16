@@ -77,7 +77,7 @@ const addEventsToCurrentPlayer = (type: PlayerEventType): GameAction => game =>
 const distributeCards: GameAction = game => {
   const distribution = game.players.reduce(
     (acc, player) => {
-      const drawnCards = Decks.drawCards(acc.deck, 10)
+      const drawnCards = Decks.drawDeckCards(acc.deck, 10)
       return {
         deck: drawnCards.deck,
         players: [...acc.players, Players.addCards(player, drawnCards.cards)],
@@ -131,7 +131,7 @@ const moveToNextPlayer: GameAction = game =>
   })(addEventsToCurrentPlayer(PlayerEventType.PlayStage1))
 
 const drawCardToPlayer: GameAction = game => {
-  const drawnCards = Decks.drawCards(game.deck, 1)
+  const drawnCards = Decks.drawDeckCards(game.deck, 1)
   return actionOf({
     ...game,
     deck: drawnCards.deck,
@@ -210,5 +210,7 @@ export const play = (playerId: PlayerId, move: Move): GameAction => game =>
     notify(NotificationType.Played, { playerId, move }),
   )
 
-export const validMoves = (game: Game) =>
-  [...allSimpleMoves.map(createMove), ...currentPlayer(game).hand.map(createDiscardCardMove)].filter(moveIsValid(game))
+export const validMoves = (game: Game) => validMovesForPlayer(currentPlayer(game))(game)
+
+  export const validMovesForPlayer = (player: Player) => (game: Game) => 
+  [...allSimpleMoves.map(createMove), ...player.hand.map(createDiscardCardMove)].filter(moveIsValid(game))

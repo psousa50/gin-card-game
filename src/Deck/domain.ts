@@ -1,15 +1,17 @@
 import * as R from "ramda"
-import * as Card from "../Cards/domain"
-import * as CardModel from "../Cards/model"
+import * as Cards from "../Cards/domain"
+import * as Players from "../Players/domain"
 import { rnd } from "../utils/misc"
 import { Deck } from "./model"
+import * as CardsModel from "../Cards/model"
+import { Player } from "../Players/model"
 
 export const create = (
-  minFaceValue: number = CardModel.minFaceValue,
-  maxFaceValue: number = CardModel.maxFaceValue,
+  minFaceValue: number = CardsModel.minFaceValue,
+  maxFaceValue: number = CardsModel.maxFaceValue,
 ): Deck => {
   const cards = R.flatten(
-    CardModel.suits.map(suit => R.range(minFaceValue, maxFaceValue + 1).map(fv => Card.create(suit, fv))),
+    CardsModel.suits.map(suit => R.range(minFaceValue, maxFaceValue + 1).map(fv => Cards.create(suit, fv))),
   )
   return {
     cards,
@@ -20,15 +22,15 @@ export const create = (
 }
 
 export const fromCards = (
-  cards: CardModel.Card[],
-  minFaceValue: number = CardModel.minFaceValue,
-  maxFaceValue: number = CardModel.maxFaceValue,
+  cards: CardsModel.Card[],
+  minFaceValue: number = CardsModel.minFaceValue,
+  maxFaceValue: number = CardsModel.maxFaceValue,
 ): Deck => ({
-    cards,
-    maxFaceValue,
-    minFaceValue,
-    size: cards.length,
-  })
+  cards,
+  maxFaceValue,
+  minFaceValue,
+  size: cards.length,
+})
 
 export const shuffle = (deck: Deck, times: number = 100) =>
   R.range(1, times + 1).reduce(({ cards }, _) => {
@@ -36,7 +38,12 @@ export const shuffle = (deck: Deck, times: number = 100) =>
     return { ...deck, cards: [...cards.slice(0, p), ...cards.slice(p + 1), cards[p]] }
   }, deck)
 
-export const drawCards = (deck: Deck, count: number) => ({
+export const drawCards = (cards: CardsModel.Card[], count: number) => ({
+  drawn: cards.slice(0, count),
+  remaining: cards.slice(count),
+})
+
+export const drawDeckCards = (deck: Deck, count: number) => ({
   cards: sortCards(deck.cards.slice(0, count)),
   deck: {
     ...deck,
@@ -44,48 +51,16 @@ export const drawCards = (deck: Deck, count: number) => ({
   },
 })
 
-export const sortCards = (cards: CardModel.Card[]) => R.sort(Card.orderBySuit, cards)
+export const sortCards = (cards: CardsModel.Card[]) => R.sort(Cards.orderBySuit, cards)
 
-const powersOfTwo = R.range(0, 14).map(i => Math.pow(2, i))
-
-export const buildComplement = (
-  cards: CardModel.Card[],
-  minFaceValue: number = CardModel.maxFaceValue,
-  maxFaceValue: number = CardModel.maxFaceValue,
-) => {
-  const initialMasks = {
-    [CardModel.Suit.Hearts]: 0,
-    [CardModel.Suit.Clubs]: 0,
-    [CardModel.Suit.Diamonds]: 0,
-    [CardModel.Suit.Spades]: 0,
-  }
-
-  const suitMasks = cards.reduce(
-    (acc, card) => ({
-      ...acc,
-      [card.suit]: acc[card.suit] + powersOfTwo[card.faceValue - minFaceValue],
-    }),
-    initialMasks,
+export const distributeCards = (cards: CardsModel.Card[], players: Player[]) =>
+  players.reduce(
+    (acc, player) => {
+      const drawnCards = drawCards(cards, 10)
+      return {
+        cards: drawnCards.remaining,
+        players: [...acc.players, Players.addCards(player, drawnCards.drawn)],
+      }
+    },
+    { cards, players: [] as Player[] },
   )
-
-  const revertedSuitMasks = R.keys(suitMasks).reduce(
-    (acc, k) => ({
-      ...acc,
-      [k]: powersOfTwo[maxFaceValue - minFaceValue + 1] - 1 - suitMasks[k],
-    }),
-    initialMasks,
-  )
-
-  // tslint:disable: no-bitwise
-  const complement =  R.flatten(
-    R.keys(revertedSuitMasks).map(suit => {
-      const mask = revertedSuitMasks[suit]
-      const values = R.range(minFaceValue, maxFaceValue + 1)
-        .map(faceValue => ((powersOfTwo[faceValue - minFaceValue] & mask) === 0 ? undefined : faceValue))
-        .filter(R.identity)
-      return values.map(v => Card.create(suit, v!))
-    }),
-  )
-
-  return complement
-}

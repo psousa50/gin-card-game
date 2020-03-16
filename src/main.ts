@@ -11,16 +11,25 @@ import { buildEnvironment } from "./Environment/domain"
 import { sort } from "ramda"
 import { toSymbols } from "./Cards/domain"
 import { findMinimalDeadwood } from "./Game/melds"
+import { findBestMove, PlayerTypes } from "./AI/mcts"
 
-const p1 = Players.create("p1", "Player 1")
-const p2 = Players.create("p2", "Player 2")
+const p1 = Players.create("p1", "Player 1", PlayerTypes.MCTS)
+const p2 = Players.create("p2", "Player 2", PlayerTypes.Random)
 const players = [p1, p2]
 const deck = Decks.shuffle(Decks.create())
+
+const getPlayerMove = (game: Game) => {
+  const player = Games.currentPlayer(game)
+  if (player.type === PlayerTypes.MCTS ) {
+    return findBestMove(game, player)
+  }
+  return randomElement(Games.validMoves(game))!
+}
 
 const getActions = (game: Game, events: PlayerEvent[]) =>
   events
     .filter(e => e.type === PlayerEventType.PlayStage1 || e.type === PlayerEventType.PlayStage2)
-    .map(_ => Games.play(Games.currentPlayer(game).id, randomElement(Games.validMoves(game))!))
+    .map(_ => Games.play(Games.currentPlayer(game).id, getPlayerMove(game)))
 
 const processEvents: GameAction = game => Games.act(game)(Games.extractEvents, ...getActions(game, game.events))
 
