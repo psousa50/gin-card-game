@@ -63,11 +63,11 @@ const m1 = findMinimalDeadwood(game.players[0].hand)
 const m2 = findMinimalDeadwood(game.players[1].hand)
 
 console.log(JSON.stringify({
-  ...m1,
+  deadwoodValue: m1.deadwoodValue,
   deadwood: toSymbols(m1.deadwood)
 }))
 
 console.log(JSON.stringify({
-  ...m2,
+  deadwoodValue: m2.deadwoodValue,
   deadwood: toSymbols(m2.deadwood)
 }))

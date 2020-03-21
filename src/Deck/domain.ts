@@ -2,7 +2,7 @@ import * as R from "ramda"
 import * as Cards from "../Cards/domain"
 import * as Players from "../Players/domain"
 import { rnd } from "../utils/misc"
-import { Deck } from "./model"
+import { Deck, DeckInfo } from "./model"
 import * as CardsModel from "../Cards/model"
 import { Player } from "../Players/model"
 
@@ -20,6 +20,8 @@ export const create = (
     size: cards.length,
   }
 }
+
+export const info = (deck: Deck): DeckInfo => R.omit(["cards"], deck)
 
 export const fromCards = (
   cards: CardsModel.Card[],
@@ -53,10 +55,10 @@ export const drawDeckCards = (deck: Deck, count: number) => ({
 
 export const sortCards = (cards: CardsModel.Card[]) => R.sort(Cards.orderBySuit, cards)
 
-export const distributeCards = (cards: CardsModel.Card[], players: Player[]) =>
+export const distributeCards = (cards: CardsModel.Card[], players: Player[], count: number = 10) =>
   players.reduce(
     (acc, player) => {
-      const drawnCards = drawCards(cards, 10)
+      const drawnCards = drawCards(cards, count)
       return {
         cards: drawnCards.remaining,
         players: [...acc.players, Players.addCards(player, drawnCards.drawn)],

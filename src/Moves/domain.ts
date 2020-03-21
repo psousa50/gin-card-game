@@ -6,6 +6,6 @@ export const createDiscardCardMove = (card: Card): DiscardCardMove => ({
   moveType: MoveType.DiscardCard as MoveType.DiscardCard,
 })
 
-export const createMove = (moveType: MoveType) => ({
+export const create = (moveType: MoveType) => ({
   moveType
 }) as Move

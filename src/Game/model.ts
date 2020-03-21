@@ -1,7 +1,7 @@
 import { Move } from "../Moves/model"
 import { Player, PlayerPublicState } from "../Players/model"
 import { Card } from "../Cards/model"
-import { Deck } from "../Deck/model"
+import { Deck, DeckInfo } from "../Deck/model"
 import { PlayerEvent } from "../Events/model"
 
 export enum GameStage {
@@ -23,6 +23,7 @@ export type GameError = {
 export type GamePublicState = {
   countOfCardsInHand: number
   currentPlayerIndex: number
+  deckInfo: DeckInfo
   discardPile: Card[]
   playersCount: number,
   stage: GameStage
