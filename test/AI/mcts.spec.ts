@@ -23,7 +23,7 @@ describe("buildGameForSimulation", () => {
     }
 
     const newGame = buildGameForSimulation(identity)(game, p1)
-    const newP2 = Players.create("p2", "Player 2", PlayerTypes.MCTS, Cards.fromSymbols("AC 2C"))
+    const newP2 = Players.create("p2", "n2", "t2", Cards.fromSymbols("AC 2C"))
 
     expect(newGame).toEqual({
       ...game,

@@ -22,6 +22,7 @@ describe("game", () => {
 
   const newGame = () => Game.create(players, deck)
 
+  const passCardAction: GameAction = game => Game.play(Game.currentPlayer(game).id, create(MoveType.Pass))(game)
   const drawCardAction: GameAction = game => Game.play(Game.currentPlayer(game).id, create(MoveType.DrawCard))(game)
   const pickCardAction: GameAction = game => Game.play(Game.currentPlayer(game).id, create(MoveType.PickCard))(game)
   const discardFirstCardAction: GameAction = game =>
@@ -48,6 +49,26 @@ describe("game", () => {
       expect(game.players[0].hand).toEqual(deck.cards.slice(0, handCount))
       expect(game.players[1].hand).toEqual(deck.cards.slice(handCount, handCount * 2))
       expect(game.stage).toBe(GameStage.Playing)
+      expect(game.currentPlayerIndex).toBe(0)
+      expect(game.moveCounter).toBe(0)
+    })
+
+    it("should clear previous state on restart", () => {
+      const game = getRight(
+        Game.run()(newGame())(
+          Game.start,
+          drawCardAction,
+          discardFirstCardAction,
+          pickCardAction,
+          discardFirstCardAction,
+          Game.restart(deck),
+        ),
+      )
+
+      expect(game.discardPile.length).toBe(1)
+      expect(game.players[0].hand).toHaveLength(10)
+      expect(game.currentPlayerIndex).toBe(0)
+      expect(game.moveCounter).toBe(0)
     })
 
     it("should send a card to the discard pile", () => {
@@ -76,11 +97,16 @@ describe("game", () => {
 
   describe("While playing", () => {
     it("should send an event for the next player", () => {
-      const move = create(MoveType.Pass)
-      const game = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, move)))
+      const game = getRight(Game.run()(newGame())(Game.start, passCardAction))
       const events = game.events.filter(e => e.target === p2.id && e.type === PlayerEventType.PlayStage1)
 
       expect(events).toHaveLength(1)
+    })
+
+    it("should clear lastPickedCard from the player after playing", () => {
+      const game = getRight(Game.run()(newGame())(Game.start, pickCardAction, discardFirstCardAction))
+
+      expect(game.players[0].lastPickedCard).toBeUndefined()
     })
 
     it("should return an error if wrong player tries to play", () => {
@@ -199,28 +225,44 @@ describe("game", () => {
   describe("Validation", () => {
     describe("Pass is valid", () => {
       it("if on first move", () => {
-        const move = create(MoveType.Pass)
-        const game = Game.run()(newGame())(Game.start, Game.play(p1.id, move))
+        const game = Game.run()(newGame())(Game.start, passCardAction)
 
         expect(isRight(game)).toBeTruthy()
       })
 
       it("if on second move and first player has passed", () => {
-        const passMove = create(MoveType.Pass)
-        const gameAfterFirstMove = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, passMove)))
-        const game = Game.run()(gameAfterFirstMove)(Game.play(p2.id, passMove))
+        const gameAfterFirstMove = getRight(Game.run()(newGame())(Game.start, passCardAction))
+        const game = Game.run()(gameAfterFirstMove)(passCardAction)
 
         expect(isRight(game)).toBeTruthy()
       })
     })
 
     describe("Pass is invalid", () => {
+      it("after draw", () => {
+        const gameAfterDraw = getRight(Game.run()(newGame())(Game.start, drawCardAction))
+        const game = Game.run()(gameAfterDraw)(passCardAction)
+
+        expect(isLeft(game)).toBeTruthy()
+      })
+
+      it("after pick", () => {
+        const gameAfterPick = getRight(Game.run()(newGame())(Game.start, pickCardAction))
+        const game = Game.run()(gameAfterPick)(passCardAction)
+
+        expect(isLeft(game)).toBeTruthy()
+      })
+
       it("if on third move", () => {
-        const passMove = create(MoveType.Pass)
-        const gameAfterTwoMoves = getRight(
-          Game.run()(newGame())(Game.start, Game.play(p1.id, passMove), Game.play(p2.id, passMove)),
-        )
-        const game = Game.run()(gameAfterTwoMoves)(Game.play(p2.id, passMove))
+        const gameAfterTwoMoves = getRight(Game.run()(newGame())(Game.start, passCardAction, passCardAction))
+        const game = Game.run()(gameAfterTwoMoves)(passCardAction)
+
+        expect(isLeft(game)).toBeTruthy()
+      })
+
+      it("if on second move and first player hasn't pass", () => {
+        const gameAfterFirstPlayer = getRight(Game.run()(newGame())(Game.start, pickCardAction, discardFirstCardAction))
+        const game = Game.run()(gameAfterFirstPlayer)(passCardAction)
 
         expect(isLeft(game)).toBeTruthy()
       })
@@ -228,16 +270,14 @@ describe("game", () => {
 
     describe("Draw", () => {
       it("is valid if player has 10 cards", () => {
-        const drawMove = create(MoveType.DrawCard)
-        const game = Game.run()(newGame())(Game.start, Game.play(p1.id, drawMove))
+        const game = Game.run()(newGame())(Game.start, drawCardAction)
 
         expect(isRight(game)).toBeTruthy()
       })
 
       it("is invalid if player has more than 10 cards", () => {
-        const drawMove = create(MoveType.DrawCard)
-        const gameAfterTwoMoves = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, drawMove)))
-        const game = Game.run()(gameAfterTwoMoves)(Game.play(p1.id, drawMove))
+        const gameAfterDraw = getRight(Game.run()(newGame())(Game.start, drawCardAction))
+        const game = Game.run()(gameAfterDraw)(drawCardAction)
 
         expect(isLeft(game)).toBeTruthy()
       })
@@ -245,16 +285,14 @@ describe("game", () => {
 
     describe("Pick", () => {
       it("is valid if player has 10 cards", () => {
-        const pickMove = create(MoveType.DrawCard)
-        const game = Game.run()(newGame())(Game.start, Game.play(p1.id, pickMove))
+        const game = Game.run()(newGame())(Game.start, drawCardAction)
 
         expect(isRight(game)).toBeTruthy()
       })
 
       it("is invalid if player has more than 10 cards", () => {
-        const pickMove = create(MoveType.DrawCard)
-        const gameAfterTwoMoves = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, pickMove)))
-        const game = Game.run()(gameAfterTwoMoves)(Game.play(p1.id, pickMove))
+        const gameAfterPick = getRight(Game.run()(newGame())(Game.start, pickCardAction))
+        const game = Game.run()(gameAfterPick)(pickCardAction)
 
         expect(isLeft(game)).toBeTruthy()
       })
@@ -262,17 +300,24 @@ describe("game", () => {
 
     describe("Discard", () => {
       it("is valid if player has 11 cards", () => {
-        const drawMove = create(MoveType.DrawCard)
-        const gameAfterDraw = getRight(Game.run()(newGame())(Game.start, Game.play(p1.id, drawMove)))
-        const cardToDiscard = randomElement(gameAfterDraw.players[0].hand)!
-        const discardMove = createDiscardCardMove(cardToDiscard)
-        const game = Game.run()(gameAfterDraw)(Game.play(p1.id, discardMove))
+        const gameAfterDraw = getRight(Game.run()(newGame())(Game.start, drawCardAction))
+        const game = Game.run()(gameAfterDraw)(discardFirstCardAction)
 
         expect(isRight(game)).toBeTruthy()
       })
 
       it("is invalid if player has less than 11 cards", () => {
         const game = Game.run()(newGame())(Game.start, discardFirstCardAction)
+
+        expect(isLeft(game)).toBeTruthy()
+      })
+
+      it("is invalid if player discards the picked card", () => {
+        const gameStarted = getRight(Game.run()(newGame())(Game.start))
+        const gameAfterPick = getRight(Game.run()(gameStarted)(pickCardAction))
+        const pickedCard = gameStarted.discardPile[0]
+        const discardPickedCardMove = createDiscardCardMove(pickedCard)
+        const game = Game.run()(gameAfterPick)(Game.play(p1.id, discardPickedCardMove))
 
         expect(isLeft(game)).toBeTruthy()
       })

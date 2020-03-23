@@ -1,13 +1,11 @@
-import { Hand } from "../Cards/model"
+import { Hand, Card } from "../Cards/model"
 
 export type PlayerId = string
 
-export type PlayerPublicState = {
+export type Player = {
   id: PlayerId
   type: string,
   name: string
   hand: Hand
-}
-
-export type Player = PlayerPublicState & {
+  lastPickedCard?: Card
 }

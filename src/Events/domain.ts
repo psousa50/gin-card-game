@@ -1,35 +1,19 @@
 import { Game } from "../Game/model"
 import { Player } from "../Players/model"
-import { PlayerEvent, PlayerEventType, PlayerEventTarget } from "./model"
+import { PlayerEvent, PlayerEventType } from "./model"
+import { defaultDeck } from "../Deck/domain"
 
-const createPlayerEventBase = (
-  target: PlayerEventTarget,
-  { hand, id, name, type }: Player,
-  {
-    currentPlayerIndex,
-    discardPile,
-    moveCounter,
-    playersCount,
-    stage,
-  }: Game,
-) => ({
-  gameState: {
-    currentPlayerIndex,
-    discardPile,
-    moveCounter,
-    playersCount,
-    stage,
+export const createPlayerEvent = (type: PlayerEventType, player: Player, game: Game) => ({
+  game: {
+    ...game,
+    deck: defaultDeck,
+    players: game.players.map(p => ({
+      ...p,
+      hand: [],
+    })),
+    events: [] as PlayerEvent[],
   },
-  playerState: {
-    hand,
-    id,
-    name,
-    type,
-  },
-  target  ,
-})
-
-export const createPlayerEvent = (type: PlayerEventType, player: Player, game: Game): PlayerEvent => ({
-  ...createPlayerEventBase(player.id, player, game),
+  player,
+  target: player.id,
   type,
 }) as PlayerEvent

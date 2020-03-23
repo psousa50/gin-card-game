@@ -14,6 +14,12 @@ export const addCards = (player: Player, cards: Card[]) => ({
   hand: [...player.hand, ...cards],
 })
 
+export const pickCard = (player: Player, card: Card) => ({
+  ...addCards(player, [card]),
+  lastPickedCard: card,
+  
+})
+
 export const removeCard = (player: Player, card: Card) => ({
   ...player,
   hand: player.hand.filter(Cards.notEqual(card))

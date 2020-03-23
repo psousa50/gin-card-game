@@ -21,6 +21,8 @@ export const create = (
   }
 }
 
+export const defaultDeck = create()
+
 export const info = (deck: Deck): DeckInfo => R.omit(["cards"], deck)
 
 export const fromCards = (

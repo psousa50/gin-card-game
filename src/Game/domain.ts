@@ -1,4 +1,5 @@
-import { Player, PlayerId, PlayerPublicState } from "../Players/model"
+import { Player, PlayerId } from "../Players/model"
+import * as Cards from "../Cards/domain"
 import * as Melds from "../Game/melds"
 import * as Players from "../Players/domain"
 import * as Events from "../Events/domain"
@@ -6,7 +7,7 @@ import * as Decks from "../Deck/domain"
 import { Deck } from "../Deck/model"
 import { Environment, Notifier, NotificationType } from "../Environment/model"
 import { GameAction, actionOf, actionErrorOf, GameResult, ask } from "../utils/actions"
-import { Game, GameStage, GameErrorType, GamePublicState } from "./model"
+import { GameStage, GameErrorType, Game } from "./model"
 import { pipe } from "fp-ts/lib/pipeable"
 import { chain } from "fp-ts/lib/ReaderEither"
 import { buildEnvironment } from "../Environment/domain"
@@ -24,16 +25,30 @@ export const create = (players: Player[], deck: Deck): Game => ({
   moveCounter: 0,
   players,
   playersCount: players.length,
+  playerPassed: false,
   stage: GameStage.Idle,
   deck,
 })
+
+export const restart = (deck: Deck): GameAction => game => act ({
+  ...game,
+  currentPlayerIndex: 0,
+  discardPile: [],
+  events: [],
+  moveCounter: 0,
+  players: game.players.map(p => ({...p, hand: []})),
+  playerPassed: false,
+  stage: GameStage.Idle,
+  deck,
+})(start)
 
 type MoveActions = {
   [k: string]: GameAction[]
 }
 
+type MoveContext = { game: Game; player: Player; move: Move }
 type MoveRules = {
-  [k: string]: (game: GamePublicState) => (player: PlayerPublicState) => boolean
+  [k: string]: (context: MoveContext) => boolean
 }
 
 const withEnv = (f: (game: Game) => (env: Environment) => GameResult) => (game: Game) => pipe(ask(), chain(f(game)))
@@ -99,18 +114,21 @@ const validatePlayer = (playerId: PlayerId): GameAction => game =>
   currentPlayer(game).id === playerId ? actionOf(game) : gameErrorOf(GameErrorType.InvalidPlayer)
 
 const moveRules: MoveRules = {
-  [MoveType.Pass]: game => player =>
-    player.hand.length === 10 && (game.moveCounter === 0 || (game.moveCounter === 1 && game.discardPile.length === 1)),
-  [MoveType.DiscardCard]: _ => player => player.hand.length === 11,
-  [MoveType.PickCard]: _ => player => player.hand.length === 10,
-  [MoveType.DrawCard]: _ => player => player.hand.length === 10,
-  [MoveType.Knock]: _ => player => Melds.findMinimalDeadwood(player.hand).deadwoodValue <= 10,
-  [MoveType.Gin]: _ => player => Melds.findMinimalDeadwood(player.hand).deadwood.length <= 1,
+  [MoveType.Pass]: ({ game, player }) =>
+    player.hand.length === 10 && (game.moveCounter === 0 || (game.moveCounter === 1 && game.playerPassed)),
+  [MoveType.DiscardCard]: ({ player, move }) =>
+    move.moveType === MoveType.DiscardCard &&
+    player.hand.length === 11 &&
+    (player.lastPickedCard === undefined || Cards.notEqual(player.lastPickedCard)(move.card)),
+  [MoveType.PickCard]: ({ player }) => player.hand.length === 10,
+  [MoveType.DrawCard]: ({ player }) => player.hand.length === 10,
+  [MoveType.Knock]: ({ player }) => Melds.findMinimalDeadwood(player.hand).deadwoodValue <= 10,
+  [MoveType.Gin]: ({ player }) => Melds.findMinimalDeadwood(player.hand).deadwood.length <= 1,
 }
 
-const moveIsValid = (game: GamePublicState) => (player: PlayerPublicState) => (move: Move) => moveRules[move.moveType](game)(player)
+const moveIsValid = (game: Game) => (player: Player) => (move: Move) => moveRules[move.moveType]({ game, player, move })
 
-const validateMove = (player: PlayerPublicState) => (move: Move): GameAction => game =>
+const validateMove = (player: Player) => (move: Move): GameAction => game =>
   moveIsValid(game)(player)(move) ? actionOf(game) : gameErrorOf(GameErrorType.InvalidMove)
 
 const drawCard: GameAction = game =>
@@ -123,9 +141,16 @@ const drawCard: GameAction = game =>
     },
   })
 
+const playerPassed: GameAction = game =>
+  actionOf({
+    ...game,
+    playerPassed: true,
+  })
+
 const moveToNextPlayer: GameAction = game =>
   act({
     ...game,
+    players: replaceCurrentPlayer(game, p => ({ ...p, lastPickedCard: undefined })),
     currentPlayerIndex: (game.currentPlayerIndex + 1) % game.playersCount,
     moveCounter: game.moveCounter + 1,
   })(addEventsToCurrentPlayer(PlayerEventType.PlayStage1))
@@ -143,7 +168,7 @@ const pickCardToPlayer: GameAction = game =>
   actionOf({
     ...game,
     discardPile: game.discardPile.slice(1),
-    players: replaceCurrentPlayer(game, p => Players.addCards(p, [game.discardPile[0]])),
+    players: replaceCurrentPlayer(game, p => Players.pickCard(p, game.discardPile[0])),
   })
 
 const discardCardFromPlayer = (cardToDiscard: Card): GameAction => game =>
@@ -188,7 +213,7 @@ export const extractEvents: GameAction = game =>
   })
 
 const moveActions: MoveActions = {
-  [MoveType.Pass]: [moveToNextPlayer],
+  [MoveType.Pass]: [playerPassed, moveToNextPlayer],
   [MoveType.PickCard]: [pickCardToPlayer, addEventsToCurrentPlayer(PlayerEventType.PlayStage2)],
   [MoveType.DrawCard]: [drawCardToPlayer, addEventsToCurrentPlayer(PlayerEventType.PlayStage2)],
   [MoveType.Knock]: [endGame],
@@ -212,5 +237,7 @@ export const play = (playerId: PlayerId, move: Move): GameAction => game =>
 
 export const validMoves = (game: Game) => validMovesForPlayer(currentPlayer(game))(game)
 
-export const validMovesForPlayer = (player: PlayerPublicState) => (game: GamePublicState) =>
-  [...allSimpleMoves.map(Moves.create), ...player.hand.map(Moves.createDiscardCardMove)].filter(moveIsValid(game)(player))
+export const validMovesForPlayer = (player: Player) => (game: Game) =>
+  [...allSimpleMoves.map(Moves.create), ...player.hand.map(Moves.createDiscardCardMove)].filter(
+    moveIsValid(game)(player),
+  )

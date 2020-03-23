@@ -1,5 +1,5 @@
-import { GamePublicState } from "../Game/model"
-import { PlayerPublicState } from "../Players/model"
+import { Game } from "../Game/model"
+import { Player } from "../Players/model"
 
 export type PlayerEventTarget = string
 
@@ -14,8 +14,8 @@ export enum PlayerEventType {
 export interface PlayerEventBase {
   type: PlayerEventType
   target: PlayerEventTarget
-  playerState: PlayerPublicState
-  gameState: GamePublicState
+  player: Player
+  game: Game
 }
 
 export interface PlayerEventGameStarted extends PlayerEventBase {

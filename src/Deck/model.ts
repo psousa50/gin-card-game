@@ -9,3 +9,4 @@ export type DeckInfo = {
 export type Deck = {
   cards: Card[],
 } & DeckInfo
+

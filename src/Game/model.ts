@@ -1,5 +1,5 @@
 import { Move } from "../Moves/model"
-import { Player, PlayerPublicState } from "../Players/model"
+import { Player } from "../Players/model"
 import { Card } from "../Cards/model"
 import { Deck, DeckInfo } from "../Deck/model"
 import { PlayerEvent } from "../Events/model"
@@ -20,20 +20,18 @@ export type GameError = {
   type: GameErrorType
 }
 
-export type GamePublicState = {
+export type Game = {
   countOfCardsInHand: number
   currentPlayerIndex: number
   deckInfo: DeckInfo
   discardPile: Card[]
-  playersCount: number,
+  playersCount: number
+  playerPassed: boolean
   stage: GameStage
   moveCounter: number
-}
-
-export type Game = GamePublicState & {
   deck: Deck
   players: Player[]
   events: PlayerEvent[]
 }
 
-export type MoveValidator = (gameState: GamePublicState, playerState: PlayerPublicState) => (move: Move) => boolean
+export type MoveValidator = (game: Game, player: Player) => (move: Move) => boolean
