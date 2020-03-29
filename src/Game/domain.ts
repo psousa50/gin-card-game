@@ -1,3 +1,4 @@
+import * as R from "ramda"
 import { Player, PlayerId } from "../Players/model"
 import * as Cards from "../Cards/domain"
 import * as Melds from "../Game/melds"
@@ -15,32 +16,46 @@ import { PlayerEvent, PlayerEventType } from "../Events/model"
 import { Move, MoveType, allSimpleMoves } from "../Moves/model"
 import { Card } from "../Cards/model"
 import * as Moves from "../Moves/domain"
+import { lj } from "../utils/misc"
 
 export const create = (players: Player[], deck: Deck): Game => ({
   countOfCardsInHand: 10,
   currentPlayerIndex: 0,
+  deck,
   deckInfo: Decks.info(deck),
   discardPile: [],
   events: [],
+  lastMove: undefined,
   moveCounter: 0,
+  playerPassed: false,
   players,
   playersCount: players.length,
-  playerPassed: false,
   stage: GameStage.Idle,
-  deck,
 })
 
-export const restart = (deck: Deck): GameAction => game => act ({
+export const restart = (deck: Deck): GameAction => game =>
+  act({
+    ...game,
+    currentPlayerIndex: 0,
+    discardPile: [],
+    events: [],
+    moveCounter: 0,
+    players: game.players.map(p => ({ ...p, hand: [] })),
+    playerPassed: false,
+    stage: GameStage.Idle,
+    deck,
+  })(start)
+
+export const toPrintableJSON = (game: Game) => ({
   ...game,
-  currentPlayerIndex: 0,
-  discardPile: [],
+  deck: Cards.toSymbols(game.deck.cards),
+  discardPile: Cards.toSymbols(game.discardPile),
+  players: game.players.map(p => ({
+    ...p,
+    hand: Cards.toSymbols(R.sort(Cards.orderByFaceValue, p.hand)),
+  })),
   events: [],
-  moveCounter: 0,
-  players: game.players.map(p => ({...p, hand: []})),
-  playerPassed: false,
-  stage: GameStage.Idle,
-  deck,
-})(start)
+})
 
 type MoveActions = {
   [k: string]: GameAction[]
@@ -184,17 +199,18 @@ const startPlaying: GameAction = game =>
     stage: GameStage.Playing,
   })
 
-const endGame: GameAction = game =>
+const endGame = (move: Move | undefined): GameAction => game =>
   actionOf({
     ...game,
+    lastMove: move,
     stage: GameStage.Ended,
   })
 
-const checkEndOfDeck: GameAction = game => (game.deck.cards.length <= 2 ? endGame(game) : actionOf(game))
+const checkEndOfDeck: GameAction = game => (game.deck.cards.length <= 2 ? endGame(undefined)(game) : actionOf(game))
 
 const checkBigGin: GameAction = game =>
   currentPlayer(game).hand.length === 11 && Melds.findMinimalDeadwood(currentPlayer(game).hand).deadwood.length === 0
-    ? endGame(game)
+    ? endGame(Moves.create(MoveType.BigGin))(game)
     : actionOf(game)
 
 export const start: GameAction = game =>
@@ -212,18 +228,18 @@ export const extractEvents: GameAction = game =>
     events: [],
   })
 
-const moveActions: MoveActions = {
+const moveActions = (move: Move): MoveActions => ({
   [MoveType.Pass]: [playerPassed, moveToNextPlayer],
   [MoveType.PickCard]: [pickCardToPlayer, addEventsToCurrentPlayer(PlayerEventType.PlayStage2)],
   [MoveType.DrawCard]: [drawCardToPlayer, addEventsToCurrentPlayer(PlayerEventType.PlayStage2)],
-  [MoveType.Knock]: [endGame],
-  [MoveType.Gin]: [endGame],
-}
+  [MoveType.Knock]: [endGame(move)],
+  [MoveType.Gin]: [endGame(move)],
+})
 
 export const doMove = (move: Move): GameAction => game =>
   move.moveType === MoveType.DiscardCard
     ? act(game)(discardCardFromPlayer(move.card), moveToNextPlayer)
-    : act(game)(...moveActions[move.moveType])
+    : act(game)(...moveActions(move)[move.moveType])
 
 export const play = (playerId: PlayerId, move: Move): GameAction => game =>
   act(game)(
@@ -241,3 +257,39 @@ export const validMovesForPlayer = (player: Player) => (game: Game) =>
   [...allSimpleMoves.map(Moves.create), ...player.hand.map(Moves.createDiscardCardMove)].filter(
     moveIsValid(game)(player),
   )
+
+const calcPlayerScore = (player: Player, knockPlayer: Player, deadwoodValue: number, otherDeadwoodValue: number) => {
+  const deadwoodDifference = deadwoodValue - otherDeadwoodValue
+
+  const ginOrBigGinScore = otherDeadwoodValue + (player.hand.length === 11 ? 31 : 25)
+  const knockScore =
+    player.id === knockPlayer.id
+      ? deadwoodDifference < 0
+        ? -deadwoodDifference
+        : 0
+      : deadwoodDifference < 0
+      ? 25 - deadwoodDifference
+      : 0
+
+  return deadwoodValue === 0 ? ginOrBigGinScore : knockScore
+}
+
+const calcMeldsScore = (game: Game) => {
+  const melds1 = Melds.findMinimalDeadwood(game.players[0].hand)
+  const melds2 = Melds.findMinimalDeadwood(game.players[1].hand)
+
+  return {
+    scores: [
+      calcPlayerScore(game.players[0], currentPlayer(game), melds1.deadwoodValue, melds2.deadwoodValue),
+      calcPlayerScore(game.players[1], currentPlayer(game), melds2.deadwoodValue, melds1.deadwoodValue),
+    ],
+  }
+}
+
+export const result = (game: Game) =>
+  game.lastMove
+    ? calcMeldsScore(game)
+    : {
+        scores: [0, 0],
+      }
+

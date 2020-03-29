@@ -7,6 +7,7 @@ export enum MoveType {
   Pass = "Pass",
   Knock = "Knock",
   Gin = "Gin",
+  BigGin = "BigGin",
 }
 
 export type DrawCardMove = {

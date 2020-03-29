@@ -17,7 +17,6 @@ export const create = (
     cards,
     maxFaceValue,
     minFaceValue,
-    size: cards.length,
   }
 }
 
@@ -33,7 +32,6 @@ export const fromCards = (
   cards,
   maxFaceValue,
   minFaceValue,
-  size: cards.length,
 })
 
 export const shuffle = (deck: Deck, times: number = 100) =>

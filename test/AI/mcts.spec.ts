@@ -3,7 +3,7 @@ import * as Decks from "../../src/Deck/domain"
 import * as Games from "../../src/Game/domain"
 import * as Moves from "../../src/Moves/domain"
 import * as Players from "../../src/Players/domain"
-import { buildGameForSimulation, PlayerTypes, findBestMove } from "../../src/AI/mcts"
+import { buildGameForSimulation, findBestMove } from "../../src/AI/mcts"
 import { identity } from "ramda"
 import { MoveType } from "../../src/Moves/model"
 import { Card } from "../../src/Cards/model"
@@ -34,7 +34,7 @@ describe("buildGameForSimulation", () => {
   })
 })
 
-describe("findBestMove", () => {
+describe.skip("findBestMove", () => {
   describe("should", () => {
     const fullDeck = Decks.create()
     const deck = Decks.fromCards(Cards.fromSymbols("2C 5C 8C"), fullDeck.minFaceValue, fullDeck.maxFaceValue)
@@ -73,6 +73,22 @@ describe("findBestMove", () => {
       const bestMove = findBestMove(game, game.players[0])
 
       expect(bestMove).toEqual(Moves.createDiscardCardMove(Cards.fromSymbol("JD")))
+    })
+
+    it("should pick card if pile card decreases deadwood", () => {
+      const player1Hand = Cards.fromSymbols("2H 4D 4S 5D 6S JD JS QS KH KS")
+      const player2Hand = Cards.fromSymbols("3H 5H 5S 6D 7S 8D 8S 9S 9D QH")
+      const topPile = Cards.fromSymbol("KD")
+      const deckCards = [...player1Hand, ...player2Hand, topPile]
+      const deck = Decks.fromCards([...deckCards, ...fullDeck.cards.filter(Cards.notIn(deckCards))])
+      const p1 = Players.create("p1", "n1", "t1")
+      const p2 = Players.create("p2", "n2", "t2")
+
+      const game = getRight(Games.run()(Games.create([p1, p2], deck))(Games.start))
+
+      const bestMove = findBestMove(game, game.players[0])
+
+      expect(bestMove).toEqual(Moves.create(MoveType.PickCard))
     })
   })
 })

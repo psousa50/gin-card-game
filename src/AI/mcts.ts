@@ -1,4 +1,3 @@
-import * as R from "ramda"
 import { buildEnvironment } from "../Environment/domain"
 import { Environment, Notifier } from "../Environment/model"
 import * as MCTS from "../monte-carlo-tree-search/mcts"
@@ -11,6 +10,7 @@ import { findMinimalDeadwood } from "../Game/melds"
 import { Move } from "../Moves/model"
 import { Deck } from "../Deck/model"
 import { actionOf, getEitherRight } from "../utils/actions"
+import { lj } from "../utils/misc"
 
 export enum PlayerTypes {
   Human = "Human",
@@ -23,21 +23,12 @@ const defaultOptions = {
 }
 
 export const notify: Notifier = (type, data) => game => {
-  const d = {
+  const j = {
     type,
     data,
-    game: {
-      ...game,
-      deck: Cards.toSymbols(game.deck.cards),
-      discardPile: Cards.toSymbols(game.discardPile),
-      players: game.players.map(p => ({
-        ...p,
-        hand: Cards.toSymbols(R.sort(Cards.orderByFaceValue, p.hand)),
-      })),
-      events: undefined,
-    },
+    ...Games.toPrintableJSON(game),
   }
-  console.log(JSON.stringify(d, null, 2))
+  console.log(JSON.stringify(j, null, 2))
   return actionOf(game)
 }
 
@@ -59,7 +50,15 @@ const calcScore = (player: Player) => {
   return score
 }
 
-const calcScores = (game: Game) => game.players.map(calcScore)
+const calcScores2 = (game: Game) => game.players.map(calcScore)
+const calcScores = (game: Game) => {
+  const s = Games.result(game).scores.map(s => s / 31)
+  if (s !== [0.0]) {
+    console.log("=====>\n", s)
+  }
+
+  return s
+}
 
 const isFinal = (game: Game) => game.stage === GameStage.Ended
 
@@ -84,9 +83,9 @@ export const buildGameForSimulation = (shuffle: (deck: Deck) => Deck) => (game: 
   const { minFaceValue, maxFaceValue } = game.deckInfo
   const knownCards = [...game.discardPile, ...player.hand]
   const deckCards = shuffle(Decks.create(minFaceValue, maxFaceValue)).cards.filter(Cards.notIn(knownCards))
-  const otherPlayers = game.players.filter(p => p.id !== player.id).map(p => ({ ...p, hand: []}))
+  const otherPlayers = game.players.filter(p => p.id !== player.id).map(p => ({ ...p, hand: [] }))
   const distributed = Decks.distributeCards(deckCards, otherPlayers, game.countOfCardsInHand)
-  const players = game.players.map(p => p.id === player.id ? player : distributed.players.find(op => op.id === p.id)!)
+  const players = game.players.map(p => (p.id === player.id ? player : distributed.players.find(op => op.id === p.id)!))
   const deck = Decks.fromCards(distributed.cards, minFaceValue, maxFaceValue)
 
   // console.log("FC=====>\n", Cards.toSymbols(Decks.create(minFaceValue, maxFaceValue).cards))
@@ -96,12 +95,14 @@ export const buildGameForSimulation = (shuffle: (deck: Deck) => Deck) => (game: 
   // console.log("P1H=====>\n", Cards.toSymbols(players[1].hand))
   // console.log("DECK=====>\n", Cards.toSymbols(distributed.cards))
 
-  return {
+  const newGame = {
     ...game,
     events: [],
     deck,
     players,
   }
+
+  return newGame
 }
 
 export const notifier = (notification: MCTS.Notification) =>
@@ -121,7 +122,7 @@ export const notifier = (notification: MCTS.Notification) =>
 
 const simulateGame = (currentGame: Game, player: Player, options: MCTS.Options) => {
   const gameForSimulation = buildGameForSimulation(Decks.shuffle)(currentGame, player)
-  const tree = MCTS.createTree({ ...config })(gameForSimulation, gameForSimulation.currentPlayerIndex)
+  const tree = MCTS.createTree({ ...config, notifier })(gameForSimulation, gameForSimulation.currentPlayerIndex)
 
   const result = MCTS.findBestNode(tree, options)
   // console.log("RESULT: ", JSON.stringify(result.iterationCount, null, 2))

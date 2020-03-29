@@ -23,15 +23,16 @@ export type GameError = {
 export type Game = {
   countOfCardsInHand: number
   currentPlayerIndex: number
+  deck: Deck
   deckInfo: DeckInfo
   discardPile: Card[]
-  playersCount: number
-  playerPassed: boolean
-  stage: GameStage
-  moveCounter: number
-  deck: Deck
-  players: Player[]
   events: PlayerEvent[]
+  lastMove: Move | undefined
+  moveCounter: number
+  playerPassed: boolean
+  players: Player[]
+  playersCount: number
+  stage: GameStage
 }
 
 export type MoveValidator = (game: Game, player: Player) => (move: Move) => boolean
