@@ -10,7 +10,7 @@ import { findMinimalDeadwood } from "../Game/melds"
 import { Move } from "../Moves/model"
 import { Deck } from "../Deck/model"
 import { actionOf, getEitherRight } from "../utils/actions"
-import { lj } from "../utils/misc"
+import { lj, randomElement } from "../utils/misc"
 
 export enum PlayerTypes {
   Human = "Human",
@@ -19,7 +19,7 @@ export enum PlayerTypes {
 }
 
 const defaultOptions = {
-  timeLimitMs: 500,
+  timeLimitMs: 2000,
 }
 
 export const notify: Notifier = (type, data) => game => {
@@ -32,35 +32,33 @@ export const notify: Notifier = (type, data) => game => {
   return actionOf(game)
 }
 
-const environment: Environment = buildEnvironment({})
+const environment: Environment = buildEnvironment()
 
-const calcScore = (player: Player) => {
-  const { deadwood, deadwoodValue } = findMinimalDeadwood(player.hand)
-  const value =
-    deadwood.length === 0 && player.hand.length === 11
-      ? 31
-      : deadwood.length === 0 && player.hand.length === 10
-      ? 25
-      : -deadwoodValue
+const calcScores = (game: Game) => Games.result(game).scores.map(s => s / 31)
 
-  const score = (value + 100) / 131
-
-  // console.log("SCORE", Cards.toSymbols(player.hand), score)
-
-  return score
-}
-
-const calcScores2 = (game: Game) => game.players.map(calcScore)
-const calcScores = (game: Game) => {
-  const s = Games.result(game).scores.map(s => s / 31)
-  if (s !== [0.0]) {
-    console.log("=====>\n", s)
+const isFinal = (game: Game) => {
+  if (game.moveCounter > 500) {
+    lj("GAME FINAL", Games.toPrintableJSON(game))
   }
-
-  return s
+  return game.stage === GameStage.Ended || game.moveCounter > 500
 }
 
-const isFinal = (game: Game) => game.stage === GameStage.Ended
+const nextMove = (game: Game) => {
+  const moves = Games.validMoves(game)
+  // lj("MOVES", moves)
+  const playerId = Games.currentPlayer(game).id
+  const deadwoods = moves.map(move => {
+    const nextGame = getEitherRight(Games.run()(game)(Games.play(playerId, move)))
+    const melds = findMinimalDeadwood(Games.getPlayer(nextGame, playerId).hand)
+    return melds.deadwoodValue
+  })
+  const minDeadwood = Math.min(...deadwoods)
+  const i = deadwoods.findIndex(d => d === minDeadwood)
+  // const i = Math.floor(Math.random() * moves.length)
+  const move = i >= 0 ? moves[i] : undefined
+  // lj("deadwoods", deadwoods)
+  return move
+}
 
 const nextState = (game: Game, move: Move) =>
   getEitherRight(Games.run(environment)(game)(Games.play(Games.currentPlayer(game).id, move)))
@@ -69,6 +67,7 @@ const gameRules: MCTS.GameRules<Game, Move> = {
   availableMoves: Games.validMoves,
   currentPlayerIndex: state => state.currentPlayerIndex,
   isFinal,
+  nextMove,
   nextState,
   playersCount: state => state.playersCount,
 }

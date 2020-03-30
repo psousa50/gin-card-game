@@ -2,6 +2,7 @@ import * as Cards from "../Cards/domain"
 import { Card, suits } from "../Cards/model"
 import { keys, sort, flatten } from "ramda"
 import { calcCardsValue } from "../Cards/domain"
+import { lj } from "../utils/misc"
 
 type CardCount = {
   [k: string]: Card[]
@@ -21,14 +22,14 @@ type MeldsAndDeadwoodWithValue = MeldsAndDeadwood & {
   deadwoodValue: number
 }
 
-const buildSequemces = (sameSuitCards: Card[]): Card[][] => {
+const buildSequences = (sameSuitCards: Card[]): Card[][] => {
   const ordered = sort(Cards.orderBySuit, sameSuitCards)
 
   const seqs = ordered.reduce((acc, card) => {
     const l = acc.length
     const last = l > 0 ? acc[l - 1] : undefined
     return !last || card.faceValue === last[last.length - 1].faceValue + 1
-      ? [...acc.slice(0, l - 2), [...(last || []), card]]
+      ? [...acc.slice(0, l - 1), [...(last || []), card]]
       : [...acc, [card]]
   }, [] as Card[][])
 
@@ -56,7 +57,7 @@ export const findAllPossibleMelds = (
     (acc, cur) => ({ ...acc, [cur]: cardsForRuns.filter(Cards.isSuit(cur)) }),
     {} as SuitCards,
   )
-  const runs = suits.reduce((acc, suit) => [...acc, ...buildSequemces(cardSuits[suit])], [] as Card[][])
+  const runs = suits.reduce((acc, suit) => [...acc, ...buildSequences(cardSuits[suit])], [] as Card[][])
 
   const cardsOnRuns = flatten(runs)
   const cardsOnSets = flatten(sets)

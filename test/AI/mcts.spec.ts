@@ -34,7 +34,7 @@ describe("buildGameForSimulation", () => {
   })
 })
 
-describe.skip("findBestMove", () => {
+describe("findBestMove", () => {
   describe("should", () => {
     const fullDeck = Decks.create()
     const deck = Decks.fromCards(Cards.fromSymbols("2C 5C 8C"), fullDeck.minFaceValue, fullDeck.maxFaceValue)
@@ -75,7 +75,7 @@ describe.skip("findBestMove", () => {
       expect(bestMove).toEqual(Moves.createDiscardCardMove(Cards.fromSymbol("JD")))
     })
 
-    it("should pick card if pile card decreases deadwood", () => {
+    it.only("should pick card if pile card decreases deadwood", () => {
       const player1Hand = Cards.fromSymbols("2H 4D 4S 5D 6S JD JS QS KH KS")
       const player2Hand = Cards.fromSymbols("3H 5H 5S 6D 7S 8D 8S 9S 9D QH")
       const topPile = Cards.fromSymbol("KD")

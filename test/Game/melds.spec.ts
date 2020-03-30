@@ -1,6 +1,7 @@
 import { fromSymbols, toSymbols } from "../../src/Cards/domain"
 import { findAllPossibleMelds, findMinimalDeadwood, permutations } from "../../src/Game/melds"
 import { Card } from "../../src/Cards/model"
+import { lj } from "../../src/utils/misc"
 
 describe("extractMelds", () => {
   describe("with no restrictions", () => {
@@ -159,6 +160,30 @@ describe("findMinimalDeadwood", () => {
         deadwood: fromSymbols("2D 4D 6D"),
         deadwoodValue: 12,
         runs: [fromSymbols("8C 9C 10C"), fromSymbols("2S 3S 4S 5S")],
+        sets: [],
+      }
+
+      expect(findMinimalDeadwood(cards)).toEqual(expected)
+    })
+
+    it("case 5", () => {
+      const cards = fromSymbols("AH AC 2S 3S 4S 5S 6H 7S 8S 9S")
+      const expected = {
+        deadwood: fromSymbols("AH AC 6H"),
+        deadwoodValue: 8,
+        runs: [fromSymbols("2S 3S 4S 5S"), fromSymbols("7S 8S 9S")],
+        sets: [],
+      }
+
+      expect(findMinimalDeadwood(cards)).toEqual(expected)
+    })
+
+    it("case 6", () => {
+      const cards = fromSymbols("AS 2S 3S 6S 7S 8S 10S JS QS KS")
+      const expected = {
+        deadwood: [],
+        deadwoodValue: 0,
+        runs: [fromSymbols("AS 2S 3S"), fromSymbols("6S 7S 8S"), fromSymbols("10S JS QS KS")],
         sets: [],
       }
 
