@@ -10,7 +10,7 @@ import { findMinimalDeadwood } from "../Game/melds"
 import { Move } from "../Moves/model"
 import { Deck } from "../Deck/model"
 import { actionOf, getEitherRight } from "../utils/actions"
-import { lj, randomElement } from "../utils/misc"
+import { lj } from "../utils/misc"
 
 export enum PlayerTypes {
   Human = "Human",

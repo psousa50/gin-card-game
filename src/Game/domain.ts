@@ -16,7 +16,6 @@ import { PlayerEvent, PlayerEventType } from "../Events/model"
 import { Move, MoveType, allSimpleMoves } from "../Moves/model"
 import { Card } from "../Cards/model"
 import * as Moves from "../Moves/domain"
-import { lj } from "../utils/misc"
 
 export const create = (players: Player[], deck: Deck): Game => ({
   countOfCardsInHand: 10,

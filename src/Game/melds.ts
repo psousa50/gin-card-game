@@ -2,7 +2,6 @@ import * as Cards from "../Cards/domain"
 import { Card, suits } from "../Cards/model"
 import { keys, sort, flatten } from "ramda"
 import { calcCardsValue } from "../Cards/domain"
-import { lj } from "../utils/misc"
 
 type CardCount = {
   [k: string]: Card[]
